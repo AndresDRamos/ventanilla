@@ -1,17 +1,27 @@
-import { useState } from 'react';
-import styled from 'styled-components';
-import { useEsquemasPago, useTiposSolicitud, usePrioridades, useTickets } from '../utils/useTickets.js';
+import { useState } from "react";
+import styled from "styled-components";
+import {
+  useEsquemasPago,
+  useTiposSolicitud,
+  usePrioridades,
+  useTickets,
+} from "../utils/useTickets.js";
 
-const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBack }) => {
+const EmployeeQuestionnaire = ({
+  employeeData,
+  onTicketSubmitted,
+  onLogout,
+  onBack,
+}) => {
   const [formData, setFormData] = useState({
-    idEsquemaPago: '',
-    idTipoSolicitud: '',
-    descripcion: '',
-    idPrioridad: ''
+    idEsquemaPago: "",
+    idTipoSolicitud: "",
+    descripcion: "",
+    idPrioridad: "",
   });
-  
+
   const [formErrors, setFormErrors] = useState({});
-  
+
   // Hooks para obtener datos
   const { esquemas, loading: loadingEsquemas } = useEsquemasPago();
   const { tipos, loading: loadingTipos } = useTiposSolicitud();
@@ -19,28 +29,32 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBa
   const { createTicket, loading: creatingTicket } = useTickets();
 
   const handleInputChange = (field, value) => {
-    setFormData(prev => ({ ...prev, [field]: value }));
+    setFormData((prev) => ({ ...prev, [field]: value }));
     // Limpiar error del campo si existe
     if (formErrors[field]) {
-      setFormErrors(prev => ({ ...prev, [field]: '' }));
+      setFormErrors((prev) => ({ ...prev, [field]: "" }));
     }
   };
 
   const validateForm = () => {
     const errors = {};
-    
-    if (!formData.idEsquemaPago) errors.idEsquemaPago = 'Debe seleccionar un esquema de pago';
-    if (!formData.idTipoSolicitud) errors.idTipoSolicitud = 'Debe seleccionar un tipo de solicitud';
-    if (!formData.descripcion.trim()) errors.descripcion = 'Debe proporcionar una descripción';
-    if (!formData.idPrioridad) errors.idPrioridad = 'Debe seleccionar una prioridad';
-    
+
+    if (!formData.idEsquemaPago)
+      errors.idEsquemaPago = "Debe seleccionar un esquema de pago";
+    if (!formData.idTipoSolicitud)
+      errors.idTipoSolicitud = "Debe seleccionar un tipo de solicitud";
+    if (!formData.descripcion.trim())
+      errors.descripcion = "Debe proporcionar una descripción";
+    if (!formData.idPrioridad)
+      errors.idPrioridad = "Debe seleccionar una prioridad";
+
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    
+
     if (!validateForm()) {
       return;
     }
@@ -50,13 +64,13 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBa
       idEsquemaPago: parseInt(formData.idEsquemaPago),
       idTipoSolicitud: parseInt(formData.idTipoSolicitud),
       descripcion: formData.descripcion.trim(),
-      idPrioridad: parseInt(formData.idPrioridad)
+      idPrioridad: parseInt(formData.idPrioridad),
     };
 
     const result = await createTicket(ticketData);
-    
+
     if (result.success) {
-      console.log('Ticket creado exitosamente:', result.ticket);
+      console.log("Ticket creado exitosamente:", result.ticket);
       onTicketSubmitted(result.ticket);
     }
   };
@@ -73,102 +87,115 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBa
 
   return (
     <Container>
-      {/* Header con información del empleado */}
-      <EmployeeHeader>
-        <HeaderLeft>
+      {/* Formulario del cuestionario */}
+      <FormContainer>
+        <FormHeader>
           {onBack && (
             <BackButton onClick={onBack} type="button" title="Volver">
               ← Volver
             </BackButton>
           )}
-          <EmployeeTitle>
-            #{employeeData.codigoEmpleado} | {employeeData.empleado}
-          </EmployeeTitle>
-        </HeaderLeft>
-        <LogoutButton onClick={onLogout} type="button" title="Cerrar sesión">
-          🚪
-        </LogoutButton>
-      </EmployeeHeader>
+          <FormTitle>Crear Nueva Solicitud</FormTitle>
+        </FormHeader>
 
-      {/* Formulario del cuestionario */}
-      <FormContainer>
-        <FormTitle>Crear Nueva Solicitud</FormTitle>
-        
         <Form onSubmit={handleSubmit}>
-        <FormGrid>
-          {/* Selección de Esquema de Pago */}
-          <FormGroup>
-            <Label>Esquema de Pago *</Label>
-            <Select
-              value={formData.idEsquemaPago}
-              onChange={(e) => handleInputChange('idEsquemaPago', e.target.value)}
-              hasError={formErrors.idEsquemaPago}
-            >
-              <option value="">Seleccione un esquema...</option>
-              {esquemas.map(esquema => (
-                <option key={esquema.idEsquemaPago} value={esquema.idEsquemaPago}>
-                  {esquema.esquemaPago}
-                </option>
-              ))}
-            </Select>
-            {formErrors.idEsquemaPago && <ErrorText>{formErrors.idEsquemaPago}</ErrorText>}
-          </FormGroup>
+          <FormGrid>
+            {/* Selección de Esquema de Pago */}
+            <FormGroup>
+              <Label>Esquema de Pago *</Label>
+              <Select
+                value={formData.idEsquemaPago}
+                onChange={(e) =>
+                  handleInputChange("idEsquemaPago", e.target.value)
+                }
+                hasError={formErrors.idEsquemaPago}
+              >
+                <option value="">Seleccione un esquema...</option>
+                {esquemas.map((esquema) => (
+                  <option
+                    key={esquema.idEsquemaPago}
+                    value={esquema.idEsquemaPago}
+                  >
+                    {esquema.esquemaPago}
+                  </option>
+                ))}
+              </Select>
+              {formErrors.idEsquemaPago && (
+                <ErrorText>{formErrors.idEsquemaPago}</ErrorText>
+              )}
+            </FormGroup>
 
-          {/* Selección de Tipo de Solicitud */}
-          <FormGroup>
-            <Label>Tipo de Solicitud *</Label>
-            <Select
-              value={formData.idTipoSolicitud}
-              onChange={(e) => handleInputChange('idTipoSolicitud', e.target.value)}
-              hasError={formErrors.idTipoSolicitud}
-            >
-              <option value="">Seleccione un tipo...</option>
-              {tipos
-                .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
-                .map(tipo => (
-                <option key={tipo.idTipoSolicitud} value={tipo.idTipoSolicitud}>
-                  {tipo.tipoSolicitud}
-                </option>
-              ))}
-            </Select>
-            {formErrors.idTipoSolicitud && <ErrorText>{formErrors.idTipoSolicitud}</ErrorText>}
-          </FormGroup>
+            {/* Selección de Tipo de Solicitud */}
+            <FormGroup>
+              <Label>Tipo de Solicitud *</Label>
+              <Select
+                value={formData.idTipoSolicitud}
+                onChange={(e) =>
+                  handleInputChange("idTipoSolicitud", e.target.value)
+                }
+                hasError={formErrors.idTipoSolicitud}
+              >
+                <option value="">Seleccione un tipo...</option>
+                {tipos
+                  .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
+                  .map((tipo) => (
+                    <option
+                      key={tipo.idTipoSolicitud}
+                      value={tipo.idTipoSolicitud}
+                    >
+                      {tipo.tipoSolicitud}
+                    </option>
+                  ))}
+              </Select>
+              {formErrors.idTipoSolicitud && (
+                <ErrorText>{formErrors.idTipoSolicitud}</ErrorText>
+              )}
+            </FormGroup>
 
-          {/* Selección de Prioridad */}
-          <FormGroup>
-            <Label>Prioridad *</Label>
-            <Select
-              value={formData.idPrioridad}
-              onChange={(e) => handleInputChange('idPrioridad', e.target.value)}
-              hasError={formErrors.idPrioridad}
-            >
-              <option value="">Seleccione una prioridad...</option>
-              {prioridades.map(prioridad => (
-                <option key={prioridad.idPrioridad} value={prioridad.idPrioridad}>
-                  {prioridad.prioridad}
-                </option>
-              ))}
-            </Select>
-            {formErrors.idPrioridad && <ErrorText>{formErrors.idPrioridad}</ErrorText>}
-          </FormGroup>
-        </FormGrid>
+            {/* Selección de Prioridad */}
+            <FormGroup>
+              <Label>Prioridad *</Label>
+              <Select
+                value={formData.idPrioridad}
+                onChange={(e) =>
+                  handleInputChange("idPrioridad", e.target.value)
+                }
+                hasError={formErrors.idPrioridad}
+              >
+                <option value="">Seleccione una prioridad...</option>
+                {prioridades.map((prioridad) => (
+                  <option
+                    key={prioridad.idPrioridad}
+                    value={prioridad.idPrioridad}
+                  >
+                    {prioridad.prioridad}
+                  </option>
+                ))}
+              </Select>
+              {formErrors.idPrioridad && (
+                <ErrorText>{formErrors.idPrioridad}</ErrorText>
+              )}
+            </FormGroup>
+          </FormGrid>
 
-        {/* Descripción del Problema */}
-        <DescriptionSection>
-          <Label>Descripción del Problema *</Label>
-          <TextArea
-            rows="3"
-            placeholder="Describe detalladamente tu solicitud o problema..."
-            value={formData.descripcion}
-            onChange={(e) => handleInputChange('descripcion', e.target.value)}
-            hasError={formErrors.descripcion}
-          />
-          {formErrors.descripcion && <ErrorText>{formErrors.descripcion}</ErrorText>}
-        </DescriptionSection>
+          {/* Descripción del Problema */}
+          <DescriptionSection>
+            <Label>Descripción del Problema *</Label>
+            <TextArea
+              rows="3"
+              placeholder="Describe detalladamente tu solicitud o problema..."
+              value={formData.descripcion}
+              onChange={(e) => handleInputChange("descripcion", e.target.value)}
+              hasError={formErrors.descripcion}
+            />
+            {formErrors.descripcion && (
+              <ErrorText>{formErrors.descripcion}</ErrorText>
+            )}
+          </DescriptionSection>
 
-        <SubmitButton type="submit" disabled={creatingTicket}>
-          {creatingTicket ? '📋 Creando ticket...' : '📋 Crear Ticket'}
-        </SubmitButton>
+          <SubmitButton type="submit" disabled={creatingTicket}>
+            {creatingTicket ? "📋 Creando ticket..." : "📋 Crear Ticket"}
+          </SubmitButton>
         </Form>
       </FormContainer>
     </Container>
@@ -182,7 +209,7 @@ const Container = styled.div`
   padding: 1rem;
   display: flex;
   flex-direction: column;
-  
+
   @media (max-width: 768px) {
     padding: 0.5rem;
     max-width: 100vw;
@@ -211,7 +238,7 @@ const FormGrid = styled.div`
   grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
-  
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
     gap: 0.8rem;
@@ -238,7 +265,9 @@ const Label = styled.label`
 
 const Select = styled.select`
   padding: 0.6rem;
-  border: 2px solid ${props => props.hasError ? 'var(--color-danger)' : 'var(--color-secondary)'};
+  border: 2px solid
+    ${(props) =>
+      props.hasError ? "var(--color-danger)" : "var(--color-secondary)"};
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
@@ -253,7 +282,9 @@ const Select = styled.select`
 
 const TextArea = styled.textarea`
   padding: 0.6rem;
-  border: 2px solid ${props => props.hasError ? 'var(--color-danger)' : 'var(--color-secondary)'};
+  border: 2px solid
+    ${(props) =>
+      props.hasError ? "var(--color-danger)" : "var(--color-secondary)"};
   border-radius: 6px;
   font-size: 0.9rem;
   font-family: inherit;
@@ -297,37 +328,10 @@ const SubmitButton = styled.button`
   }
 `;
 
-// Nuevos estilos para el header del empleado y los beneficios
-const EmployeeHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding: 0.8rem;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
-  border-radius: 8px;
-  color: white;
-  max-width: 1000px;
-  margin: 0 auto 1rem auto;
-  width: 100%;
-  
-  @media (max-width: 768px) {
-    padding: 0.6rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-`;
-
-const HeaderLeft = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-  flex: 1;
-`;
 
 const BackButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
+  background: var(--color-secondary);
+  color: black;
   border: 1px solid rgba(255, 255, 255, 0.3);
   padding: 0.4rem 0.8rem;
   border-radius: 6px;
@@ -336,53 +340,10 @@ const BackButton = styled.button`
   font-weight: 500;
   transition: all 0.2s ease;
 
+
   &:hover {
     background: rgba(255, 255, 255, 0.3);
     transform: translateX(-2px);
-  }
-`;
-
-const EmployeeTitle = styled.h2`
-  font-size: 1.3rem;
-  font-weight: 600;
-  margin: 0;
-  letter-spacing: 0.5px;
-  flex: 1;
-  text-align: center;
-  
-  @media (max-width: 768px) {
-    font-size: 1rem;
-    text-align: left;
-  }
-`;
-
-const LogoutButton = styled.button`
-  background: rgba(255, 255, 255, 0.2);
-  border: none;
-  color: white;
-  font-size: 1.2rem;
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background: rgba(255, 255, 255, 0.3);
-    transform: scale(1.1);
-  }
-
-  &:active {
-    transform: scale(0.95);
-  }
-  
-  @media (max-width: 768px) {
-    width: 35px;
-    height: 35px;
-    font-size: 1rem;
   }
 `;
 
@@ -399,14 +360,32 @@ const FormContainer = styled.div`
   width: 100%;
 `;
 
-const FormTitle = styled.h2`
-  text-align: center;
-  color: var(--color-primary);
-  margin: 0;
+const FormHeader = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
   padding: 1rem;
   background: #f8f9fa;
   border-bottom: 1px solid #e9ecef;
+
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 0.5rem;
+    align-items: flex-start;
+  }
+`;
+
+const FormTitle = styled.h2`
+  color: var(--color-primary);
+  margin: 0;
   font-size: 1.1rem;
+  flex: 1;
+  text-align: center;
+
+  @media (max-width: 480px) {
+    text-align: center;
+    width: 100%;
+  }
 `;
 
 export default EmployeeQuestionnaire;

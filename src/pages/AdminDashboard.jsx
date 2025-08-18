@@ -168,7 +168,7 @@ const AdminDashboard = () => {
           <h1>Dashboard Administrativo</h1>
           <p>Bienvenido, {user?.nombre}</p>
         </AdminInfo>
-        <LogoutButton onClick={logout}>🚪 Cerrar Sesión</LogoutButton>
+        <LogoutButton onClick={logout}>Cerrar Sesión</LogoutButton>
       </Header>
 
       {/* Estadísticas */}
@@ -848,3 +848,4 @@ const SubmitButton = styled.button`
 `;
 
 export default AdminDashboard;
+
