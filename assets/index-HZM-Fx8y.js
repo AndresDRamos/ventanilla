@@ -803,7 +803,7 @@ Option 2: Install and provide the "ws" package:
   flex: 1;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, minmax(300px, 1fr));
   gap: 1rem;
   padding-right: 0.5rem;
   grid-auto-rows: 1fr;
