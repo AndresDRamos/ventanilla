@@ -46,9 +46,7 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBa
     }
 
     const ticketData = {
-      codigoEmpleado: employeeData.codigoEmpleado,
-      empleado: employeeData.empleado,
-      idPlanta: parseInt(employeeData.idPlanta), // Ahora viene del empleado
+      idEmpleado: employeeData.idEmpleado,
       idEsquemaPago: parseInt(formData.idEsquemaPago),
       idTipoSolicitud: parseInt(formData.idTipoSolicitud),
       descripcion: formData.descripcion.trim(),

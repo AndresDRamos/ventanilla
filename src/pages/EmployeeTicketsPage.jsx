@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styled from 'styled-components';
 import { useAppAuth } from '../contexts/AuthContext.jsx';
 import useEmployeeTickets from '../utils/useEmployeeTickets.js';
+import { useEmpleados } from '../utils/useEmpleados.js';
 import EmployeeTicketCard from '../components/EmployeeTicketCard.jsx';
 import EmployeeQuestionnaire from '../components/EmployeeQuestionnaire.jsx';
 
@@ -9,14 +10,60 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   const { logout } = useAppAuth();
   const [activeTab, setActiveTab] = useState('pending'); // 'pending' o 'resolved'
   const [showNewTicket, setShowNewTicket] = useState(false);
+  const [empleadoCompleto, setEmpleadoCompleto] = useState(null);
+  const [loadingEmpleado, setLoadingEmpleado] = useState(true);
+  
+  const { buscarEmpleadoPorCodigo } = useEmpleados();
   
   const {
     pendingTickets,
     resolvedTickets,
-    loading,
+    loading: loadingTickets,
     error,
     refetch
-  } = useEmployeeTickets(employeeData?.codigoEmpleado);
+  } = useEmployeeTickets(empleadoCompleto?.idEmpleado);
+
+  // Combinar estados de loading
+  const loading = loadingEmpleado || loadingTickets;
+
+  // Buscar el empleado completo por código al montar el componente
+  useEffect(() => {
+    const buscarEmpleado = async () => {
+      if (!employeeData?.codigoEmpleado) return;
+      
+      setLoadingEmpleado(true);
+      try {
+        const result = await buscarEmpleadoPorCodigo(employeeData.codigoEmpleado);
+        if (result.success && result.empleado) {
+          setEmpleadoCompleto(result.empleado);
+        } else {
+          // Si no se encuentra el empleado en la BD, usar los datos de sesión
+          console.warn('No se encontró el empleado en BD, usando datos de sesión');
+          setEmpleadoCompleto({
+            idEmpleado: employeeData.idEmpleado,
+            codigoEmpleado: employeeData.codigoEmpleado,
+            nombre: employeeData.empleado,
+            idPlanta: employeeData.idPlanta,
+            plantas: { planta: employeeData.planta }
+          });
+        }
+      } catch (err) {
+        console.error('Error al buscar empleado:', err);
+        // En caso de error, usar los datos de sesión como fallback
+        setEmpleadoCompleto({
+          idEmpleado: employeeData.idEmpleado,
+          codigoEmpleado: employeeData.codigoEmpleado,
+          nombre: employeeData.empleado,
+          idPlanta: employeeData.idPlanta,
+          plantas: { planta: employeeData.planta }
+        });
+      } finally {
+        setLoadingEmpleado(false);
+      }
+    };
+
+    buscarEmpleado();
+  }, [employeeData, buscarEmpleadoPorCodigo]);
 
   // Función para obtener color de prioridad
   const getPriorityColor = (idPrioridad) => {
@@ -52,7 +99,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   if (showNewTicket) {
     return (
       <EmployeeQuestionnaire
-        employeeData={employeeData}
+        employeeData={empleadoCompleto || employeeData}
         onTicketSubmitted={handleTicketSubmitted}
         onLogout={handleLogout}
         onBack={() => setShowNewTicket(false)}
@@ -65,10 +112,10 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
       <Header>
         <HeaderLeft>
           <WelcomeText>
-            Bienvenido, {employeeData?.empleado}
+            Bienvenido, {empleadoCompleto?.nombre || employeeData?.empleado}
           </WelcomeText>
           <EmployeeInfo>
-            Código: {employeeData?.codigoEmpleado} | Planta: {employeeData?.plantas?.planta}
+            Código: {empleadoCompleto?.codigoEmpleado || employeeData?.codigoEmpleado} | Planta: {empleadoCompleto?.plantas?.planta || employeeData?.planta}
           </EmployeeInfo>
         </HeaderLeft>
         

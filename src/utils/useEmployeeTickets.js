@@ -1,14 +1,14 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabase.config.jsx';
 
-export const useEmployeeTickets = (codigoEmpleado) => {
+export const useEmployeeTickets = (idEmpleado) => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   useEffect(() => {
     const fetchEmployeeTicketsAsync = async () => {
-      if (!codigoEmpleado) return;
+      if (!idEmpleado) return;
       
       setLoading(true);
       setError(null);
@@ -18,9 +18,15 @@ export const useEmployeeTickets = (codigoEmpleado) => {
           .from('tickets')
           .select(`
             *,
-            plantas (
+            empleados (
+              idEmpleado,
+              codigoEmpleado,
+              nombre,
               idPlanta,
-              planta
+              plantas (
+                idPlanta,
+                planta
+              )
             ),
             tiposSolicitud (
               idTipoSolicitud,
@@ -39,7 +45,7 @@ export const useEmployeeTickets = (codigoEmpleado) => {
               )
             )
           `)
-          .eq('codigoEmpleado', codigoEmpleado)
+          .eq('idEmpleado', idEmpleado)
           .order('fechaCreacion', { ascending: false });
 
         if (fetchError) throw fetchError;
@@ -54,11 +60,11 @@ export const useEmployeeTickets = (codigoEmpleado) => {
     };
 
     fetchEmployeeTicketsAsync();
-  }, [codigoEmpleado]);
+  }, [idEmpleado]);
 
   // Función para refetch manual
   const refetch = async () => {
-    if (!codigoEmpleado) return;
+    if (!idEmpleado) return;
     
     setLoading(true);
     setError(null);
@@ -68,9 +74,15 @@ export const useEmployeeTickets = (codigoEmpleado) => {
         .from('tickets')
         .select(`
           *,
-          plantas (
+          empleados (
+            idEmpleado,
+            codigoEmpleado,
+            nombre,
             idPlanta,
-            planta
+            plantas (
+              idPlanta,
+              planta
+            )
           ),
           tiposSolicitud (
             idTipoSolicitud,
@@ -89,7 +101,7 @@ export const useEmployeeTickets = (codigoEmpleado) => {
             )
           )
         `)
-        .eq('codigoEmpleado', codigoEmpleado)
+        .eq('idEmpleado', idEmpleado)
         .order('fechaCreacion', { ascending: false });
 
       if (fetchError) throw fetchError;

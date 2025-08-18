@@ -62,7 +62,12 @@ export const AuthProvider = ({ children }) => {
     console.log('Datos del empleado:', data);
     
     const employeeUser = {
-      ...data,
+      id: data.idEmpleado,
+      idEmpleado: data.idEmpleado,
+      codigoEmpleado: data.codigoEmpleado,
+      empleado: data.empleado,
+      idPlanta: data.idPlanta,
+      planta: data.planta,
       type: 'employee'
     };
 

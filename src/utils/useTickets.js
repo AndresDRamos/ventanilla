@@ -138,9 +138,7 @@ export const useTickets = () => {
       const { data, error } = await supabase
         .from('tickets')
         .insert([{
-          codigoEmpleado: ticketData.codigoEmpleado,
-          empleado: ticketData.empleado,
-          idPlanta: ticketData.idPlanta,
+          idEmpleado: ticketData.idEmpleado,
           idEsquemaPago: ticketData.idEsquemaPago,
           idTipoSolicitud: ticketData.idTipoSolicitud,
           descripcion: ticketData.descripcion,

@@ -57,7 +57,7 @@ const TicketCard = ({
         <InfoRow>
           <InfoLabel>Empleado:</InfoLabel>
           <InfoValue>
-            {ticket.empleado} (#{ticket.codigoEmpleado})
+            {ticket.empleados?.nombre} (#{ticket.empleados?.codigoEmpleado})
           </InfoValue>
         </InfoRow>
 
@@ -68,7 +68,7 @@ const TicketCard = ({
 
         <InfoRow>
           <InfoLabel>Planta:</InfoLabel>
-          <InfoValue>{ticket.plantas?.planta}</InfoValue>
+          <InfoValue>{ticket.empleados?.plantas?.planta}</InfoValue>
         </InfoRow>
 
         <InfoRow>
@@ -78,7 +78,7 @@ const TicketCard = ({
         <InfoRow>
           <InfoLabel>Responsable:</InfoLabel>
           <InfoValue>
-            {getResponsable(ticket.idPlanta, ticket.idTipoSolicitud)}
+            {getResponsable(ticket.empleados?.idPlanta, ticket.idTipoSolicitud)}
           </InfoValue>
         </InfoRow>
 

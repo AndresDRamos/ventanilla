@@ -3,7 +3,7 @@ import { GlobalStyles } from "./styles/GlobalStyles.jsx";
 import { AuthProvider, useAppAuth } from "./contexts/AuthContext.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
-import EmployeeDashboard from "./pages/EmployeeDashboard.jsx";
+import EmployeeTicketsPage from "./pages/EmployeeTicketsPage.jsx";
 
 // Componente interno que usa el contexto
 const AppContent = () => {
@@ -39,7 +39,7 @@ const AppContent = () => {
     }
     
     if (employeeData && employeeData.type === 'employee') {
-      return <EmployeeDashboard employeeData={employeeData} onLogout={logout} />;
+      return <EmployeeTicketsPage employeeData={employeeData} onLogout={logout} />;
     }
     
     return <LoginPage />;

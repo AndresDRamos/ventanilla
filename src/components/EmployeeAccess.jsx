@@ -2,6 +2,7 @@ import { useState } from "react";
 import styled from "styled-components";
 import { useAppAuth } from "../contexts/AuthContext.jsx";
 import { usePlantas } from "../utils/useTickets.js";
+import { useEmpleados } from "../utils/useEmpleados.js";
 
 const EmployeeAccess = () => {
   const [employeeCode, setEmployeeCode] = useState("");
@@ -9,15 +10,18 @@ const EmployeeAccess = () => {
   const [selectedPlanta, setSelectedPlanta] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [step, setStep] = useState(1); // 1: Código empleado, 2: Datos completos
+  
   const { employeeLogin } = useAppAuth();
   const { plantas, loading: loadingPlantas } = usePlantas();
+  const { buscarEmpleadoPorCodigo, crearEmpleado, loading: loadingEmpleados } = useEmpleados();
 
-  const handleSubmit = async (e) => {
+  const handleCodeSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
-    if (!employeeCode.trim() || !fullName.trim() || !selectedPlanta) {
-      setError("Por favor, complete todos los campos");
+    if (!employeeCode.trim()) {
+      setError("Por favor, ingrese su código de empleado");
       return;
     }
 
@@ -29,45 +33,129 @@ const EmployeeAccess = () => {
     setLoading(true);
 
     try {
-      const result = employeeLogin({
-        codigoEmpleado: employeeCode.trim(),
-        empleado: fullName.trim(),
-        idPlanta: selectedPlanta,
-      });
+      const result = await buscarEmpleadoPorCodigo(employeeCode.trim());
+      
+      if (!result.success) {
+        setError("Error al buscar empleado: " + result.error);
+        setLoading(false);
+        return;
+      }
 
-      console.log("Empleado autenticado:", result.employee);
+      if (result.empleado) {
+        // Empleado encontrado, hacer login directo
+        const loginData = {
+          idEmpleado: result.empleado.idEmpleado,
+          codigoEmpleado: result.empleado.codigoEmpleado,
+          empleado: result.empleado.nombre,
+          idPlanta: result.empleado.idPlanta,
+          planta: result.empleado.plantas?.planta
+        };
+        
+        const loginResult = employeeLogin(loginData);
+        console.log("Empleado autenticado:", loginResult.employee);
+      } else {
+        // Empleado no encontrado, mostrar formulario de registro
+        setStep(2);
+      }
     } catch (err) {
-      setError("Error al procesar el acceso");
+      setError("Error al procesar la búsqueda");
+      console.error("Error:", err);
     } finally {
       setLoading(false);
     }
   };
 
+  const handleRegistrationSubmit = async (e) => {
+    e.preventDefault();
+    setError("");
+
+    if (!fullName.trim() || !selectedPlanta) {
+      setError("Por favor, complete todos los campos");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      const result = await crearEmpleado(employeeCode.trim(), fullName.trim(), selectedPlanta);
+      
+      if (!result.success) {
+        setError("Error al registrar empleado: " + result.error);
+        setLoading(false);
+        return;
+      }
+
+      // Empleado creado, hacer login
+      const loginResult = employeeLogin({
+        idEmpleado: result.empleado.idEmpleado,
+        codigoEmpleado: result.empleado.codigoEmpleado,
+        empleado: result.empleado.nombre,
+        idPlanta: result.empleado.idPlanta,
+        planta: result.empleado.plantas?.planta
+      });
+      
+      console.log("Empleado registrado y autenticado:", loginResult.employee);
+    } catch (err) {
+      setError("Error al procesar el registro");
+      console.error("Error:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleBackToCode = () => {
+    setStep(1);
+    setFullName("");
+    setSelectedPlanta("");
+    setError("");
+  };
+
+  if (step === 1) {
+    return (
+      <Form onSubmit={handleCodeSubmit}>
+        <Title>Acceso Empleado</Title>
+        <Description>
+          Ingresa tu código de empleado para acceder al sistema
+        </Description>
+
+        {error && <ErrorMessage>{error}</ErrorMessage>}
+
+        <FormGroup>
+          <Label>Número de Empleado</Label>
+          <NumericInput
+            type="text"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Ej: 12345"
+            value={employeeCode}
+            onChange={(e) => {
+              const value = e.target.value.replace(/\D/g, ""); // Solo números
+              setEmployeeCode(value);
+            }}
+            disabled={loading || loadingEmpleados}
+            required
+          />
+        </FormGroup>
+
+        <SubmitButton type="submit" disabled={loading || loadingEmpleados}>
+          {loading || loadingEmpleados ? "Verificando..." : "Acceder"}
+        </SubmitButton>
+      </Form>
+    );
+  }
+
   return (
-    <Form onSubmit={handleSubmit}>
-      <Title>Acceso Empleado</Title>
+    <Form onSubmit={handleRegistrationSubmit}>
+      <Title>Registro de Empleado</Title>
       <Description>
-        Ingresa tu código de empleado y nombre completo para acceder al sistema
+        No encontramos tu código de empleado. Por favor, completa la siguiente información:
       </Description>
 
       {error && <ErrorMessage>{error}</ErrorMessage>}
 
-      <FormGroup>
-        <Label>Número de Empleado</Label>
-        <NumericInput
-          type="text"
-          inputMode="numeric"
-          pattern="[0-9]*"
-          placeholder="Ej: 12345"
-          value={employeeCode}
-          onChange={(e) => {
-            const value = e.target.value.replace(/\D/g, ""); // Solo números
-            setEmployeeCode(value);
-          }}
-          disabled={loading}
-          required
-        />
-      </FormGroup>
+      <InfoMessage>
+        Código de empleado: <strong>{employeeCode}</strong>
+      </InfoMessage>
 
       <FormGroup>
         <Label>Nombre Completo</Label>
@@ -76,7 +164,7 @@ const EmployeeAccess = () => {
           placeholder="Ej: Juan Pérez García"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          disabled={loading}
+          disabled={loading || loadingEmpleados}
           required
         />
       </FormGroup>
@@ -89,7 +177,7 @@ const EmployeeAccess = () => {
           <Select
             value={selectedPlanta}
             onChange={(e) => setSelectedPlanta(e.target.value)}
-            disabled={loading}
+            disabled={loading || loadingEmpleados}
             required
           >
             <option value="">Seleccione su planta...</option>
@@ -102,9 +190,14 @@ const EmployeeAccess = () => {
         )}
       </FormGroup>
 
-      <SubmitButton type="submit" disabled={loading}>
-        {loading ? "Accediendo..." : "Acceder"}
-      </SubmitButton>
+      <ButtonGroup>
+        <BackButton type="button" onClick={handleBackToCode} disabled={loading || loadingEmpleados}>
+          Volver
+        </BackButton>
+        <SubmitButton type="submit" disabled={loading || loadingEmpleados} style={{flex: 1}}>
+          {loading || loadingEmpleados ? "Registrando..." : "Registrar y Acceder"}
+        </SubmitButton>
+      </ButtonGroup>
     </Form>
   );
 };
@@ -240,6 +333,50 @@ const ErrorMessage = styled.div`
   margin-bottom: 1rem;
   border: 1px solid var(--color-danger);
   text-align: center;
+`;
+
+const InfoMessage = styled.div`
+  background-color: #e3f2fd;
+  color: #1976d2;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+  border: 1px solid #1976d2;
+  text-align: center;
+  font-size: 0.9rem;
+`;
+
+const ButtonGroup = styled.div`
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+  }
+`;
+
+const BackButton = styled.button`
+  flex: 1;
+  background-color: #6c757d;
+  color: var(--color-white);
+  border: none;
+  padding: 0.75rem;
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-family: inherit;
+
+  &:hover:not(:disabled) {
+    background-color: #5a6268;
+  }
+
+  &:disabled {
+    background-color: var(--color-gray);
+    cursor: not-allowed;
+  }
 `;
 
 export default EmployeeAccess;

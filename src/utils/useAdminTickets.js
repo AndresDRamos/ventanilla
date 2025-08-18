@@ -15,7 +15,16 @@ export const useAdminTickets = (user) => {
         .from('tickets')
         .select(`
           *,
-          plantas:idPlanta (planta),
+          empleados (
+            idEmpleado,
+            codigoEmpleado,
+            nombre,
+            idPlanta,
+            plantas (
+              idPlanta,
+              planta
+            )
+          ),
           tiposSolicitud:idTipoSolicitud (tipoSolicitud),
           prioridades:idPrioridad (prioridad),
           atenciones (
@@ -37,7 +46,7 @@ export const useAdminTickets = (user) => {
         if (asignaciones && asignaciones.length > 0) {
           // Construir condiciones OR correctamente para Supabase
           const conditions = asignaciones.map(a => 
-            `and(idPlanta.eq.${a.idPlanta},idTipoSolicitud.eq.${a.idTipoSolicitud})`
+            `and(empleados.idPlanta.eq.${a.idPlanta},idTipoSolicitud.eq.${a.idTipoSolicitud})`
           ).join(',');
           query = query.or(conditions);
         } else {
@@ -50,7 +59,7 @@ export const useAdminTickets = (user) => {
 
       // Aplicar filtros
       if (filters.planta) {
-        query = query.eq('idPlanta', filters.planta);
+        query = query.eq('empleados.idPlanta', filters.planta);
       }
       if (filters.tipoSolicitud) {
         query = query.eq('idTipoSolicitud', filters.tipoSolicitud);
@@ -59,7 +68,7 @@ export const useAdminTickets = (user) => {
         query = query.eq('idPrioridad', filters.prioridad);
       }
       if (filters.empleado) {
-        query = query.or(`codigoEmpleado.ilike.%${filters.empleado}%,empleado.ilike.%${filters.empleado}%`);
+        query = query.or(`empleados.codigoEmpleado.ilike.%${filters.empleado}%,empleados.nombre.ilike.%${filters.empleado}%`);
       }
 
       const { data, error } = await query;

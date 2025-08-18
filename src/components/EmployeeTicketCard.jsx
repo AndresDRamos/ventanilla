@@ -49,7 +49,7 @@ const EmployeeTicketCard = ({
         
         <InfoRow>
           <InfoLabel>Planta:</InfoLabel>
-          <InfoValue>{ticket.plantas?.planta}</InfoValue>
+          <InfoValue>{ticket.empleados?.plantas?.planta}</InfoValue>
         </InfoRow>
         
         <InfoRow>

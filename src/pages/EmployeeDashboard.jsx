@@ -8,13 +8,15 @@ const EmployeeDashboard = ({ employeeData, onLogout }) => {
   const [currentStep, setCurrentStep] = useState('loading'); // loading, tickets, questionnaire, success
   const [createdTicket, setCreatedTicket] = useState(null);
   
-  const { tickets, loading } = useEmployeeTickets(employeeData?.codigoEmpleado);
+  // Usar idEmpleado en lugar de codigoEmpleado
+  const { tickets, loading } = useEmployeeTickets(employeeData?.idEmpleado);
 
   useEffect(() => {
     if (!loading) {
       // Si el empleado tiene tickets previos, mostrar la página de tickets
       // Si no tiene tickets, ir directamente al cuestionario
-      setCurrentStep(tickets.length > 0 ? 'tickets' : 'questionnaire');
+      const nextStep = tickets.length > 0 ? 'tickets' : 'questionnaire';
+      setCurrentStep(nextStep);
     }
   }, [tickets, loading]);
 
