@@ -145,7 +145,9 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout }) =>
               hasError={formErrors.idTipoSolicitud}
             >
               <option value="">Seleccione un tipo...</option>
-              {tipos.map(tipo => (
+              {tipos
+                .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
+                .map(tipo => (
                 <option key={tipo.idTipoSolicitud} value={tipo.idTipoSolicitud}>
                   {tipo.tipoSolicitud}
                 </option>

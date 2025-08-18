@@ -76,7 +76,6 @@ const Form = styled.form`
   padding: 2rem;
   background: var(--color-white);
   border-radius: 8px;
-  box-shadow: 0 2px 8px var(--color-shadow);
   position: relative;
 `;
 

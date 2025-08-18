@@ -1,43 +1,43 @@
-import { useState } from 'react';
-import styled from 'styled-components';
-import { useAppAuth } from '../contexts/AuthContext.jsx';
-import { usePlantas } from '../utils/useTickets.js';
+import { useState } from "react";
+import styled from "styled-components";
+import { useAppAuth } from "../contexts/AuthContext.jsx";
+import { usePlantas } from "../utils/useTickets.js";
 
 const EmployeeAccess = () => {
-  const [employeeCode, setEmployeeCode] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [selectedPlanta, setSelectedPlanta] = useState('');
-  const [error, setError] = useState('');
+  const [employeeCode, setEmployeeCode] = useState("");
+  const [fullName, setFullName] = useState("");
+  const [selectedPlanta, setSelectedPlanta] = useState("");
+  const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const { employeeLogin } = useAppAuth();
   const { plantas, loading: loadingPlantas } = usePlantas();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError('');
+    setError("");
 
     if (!employeeCode.trim() || !fullName.trim() || !selectedPlanta) {
-      setError('Por favor, complete todos los campos');
+      setError("Por favor, complete todos los campos");
       return;
     }
 
     if (!/^\d+$/.test(employeeCode)) {
-      setError('El código de empleado debe contener solo números');
+      setError("El código de empleado debe contener solo números");
       return;
     }
 
     setLoading(true);
-    
+
     try {
       const result = employeeLogin({
         codigoEmpleado: employeeCode.trim(),
         empleado: fullName.trim(),
-        idPlanta: selectedPlanta
+        idPlanta: selectedPlanta,
       });
-      
-      console.log('Empleado autenticado:', result.employee);
+
+      console.log("Empleado autenticado:", result.employee);
     } catch (err) {
-      setError('Error al procesar el acceso');
+      setError("Error al procesar el acceso");
     } finally {
       setLoading(false);
     }
@@ -49,12 +49,8 @@ const EmployeeAccess = () => {
       <Description>
         Ingresa tu código de empleado y nombre completo para acceder al sistema
       </Description>
-      
-      {error && (
-        <ErrorMessage>
-          {error}
-        </ErrorMessage>
-      )}
+
+      {error && <ErrorMessage>{error}</ErrorMessage>}
 
       <FormGroup>
         <Label>Número de Empleado</Label>
@@ -65,7 +61,7 @@ const EmployeeAccess = () => {
           placeholder="Ej: 12345"
           value={employeeCode}
           onChange={(e) => {
-            const value = e.target.value.replace(/\D/g, ''); // Solo números
+            const value = e.target.value.replace(/\D/g, ""); // Solo números
             setEmployeeCode(value);
           }}
           disabled={loading}
@@ -88,9 +84,7 @@ const EmployeeAccess = () => {
       <FormGroup>
         <Label>Planta</Label>
         {loadingPlantas ? (
-          <LoadingSelect disabled>
-            Cargando plantas...
-          </LoadingSelect>
+          <LoadingSelect disabled>Cargando plantas...</LoadingSelect>
         ) : (
           <Select
             value={selectedPlanta}
@@ -99,7 +93,7 @@ const EmployeeAccess = () => {
             required
           >
             <option value="">Seleccione su planta...</option>
-            {plantas.map(planta => (
+            {plantas.map((planta) => (
               <option key={planta.idPlanta} value={planta.idPlanta}>
                 {planta.planta}
               </option>
@@ -109,7 +103,7 @@ const EmployeeAccess = () => {
       </FormGroup>
 
       <SubmitButton type="submit" disabled={loading}>
-        {loading ? 'Accediendo...' : 'Acceder'}
+        {loading ? "Accediendo..." : "Acceder"}
       </SubmitButton>
     </Form>
   );
@@ -121,7 +115,6 @@ const Form = styled.form`
   padding: 2rem;
   background: var(--color-white);
   border-radius: 8px;
-  box-shadow: 0 2px 8px var(--color-shadow);
   position: relative;
 `;
 
@@ -179,7 +172,7 @@ const NumericInput = styled(BaseInput)`
   }
 
   /* Ocultar botones en Firefox */
-  &[type=number] {
+  &[type="number"] {
     -moz-appearance: textfield;
     appearance: textfield;
   }

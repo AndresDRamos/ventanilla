@@ -3,6 +3,7 @@ import styled from 'styled-components';
 import { useAppAuth } from '../contexts/AuthContext.jsx';
 import { useAdminTickets, useTicketStats, useAsignaciones, useAtenciones } from '../utils/useAdminTickets.js';
 import { usePlantas, useTiposSolicitud, usePrioridades } from '../utils/useTickets.js';
+import TicketCard from '../components/TicketCard.jsx';
 
 const AdminDashboard = () => {
   const { user, logout } = useAppAuth();
@@ -13,6 +14,7 @@ const AdminDashboard = () => {
     empleado: '',
     sortBy: 'fecha'
   });
+  const [statsFilter, setStatsFilter] = useState('todos'); // 'todos', 'sinAtender', 'respondidos'
   const [showModal, setShowModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [respuesta, setRespuesta] = useState('');
@@ -65,6 +67,26 @@ const AdminDashboard = () => {
     }
   };
 
+  // Filtrar tickets según el filtro de estadísticas
+  const filteredTickets = tickets.filter(ticket => {
+    const tieneAtencion = ticket.atenciones && ticket.atenciones.length > 0;
+    
+    switch (statsFilter) {
+      case 'sinAtender':
+        return !tieneAtencion;
+      case 'respondidos':
+        return tieneAtencion;
+      case 'todos':
+      default:
+        return true;
+    }
+  });
+
+  // Función para cambiar el filtro de estadísticas
+  const handleStatsFilter = (filterType) => {
+    setStatsFilter(filterType);
+  };
+
   const getPriorityColor = (idPrioridad) => {
     switch (idPrioridad) {
       case 1: return '#dc3545'; // Alta - Rojo
@@ -107,15 +129,24 @@ const AdminDashboard = () => {
 
       {/* Estadísticas */}
       <StatsSection>
-        <StatCard>
+        <StatCard 
+          active={statsFilter === 'sinAtender'} 
+          onClick={() => handleStatsFilter('sinAtender')}
+        >
           <StatNumber>{stats.sinAtender}</StatNumber>
           <StatLabel>Sin Atender</StatLabel>
         </StatCard>
-        <StatCard>
+        <StatCard 
+          active={statsFilter === 'respondidos'} 
+          onClick={() => handleStatsFilter('respondidos')}
+        >
           <StatNumber>{stats.respondidos}</StatNumber>
           <StatLabel>Respondidos</StatLabel>
         </StatCard>
-        <StatCard>
+        <StatCard 
+          active={statsFilter === 'todos'} 
+          onClick={() => handleStatsFilter('todos')}
+        >
           <StatNumber>{stats.total}</StatNumber>
           <StatLabel>Totales</StatLabel>
         </StatCard>
@@ -146,7 +177,9 @@ const AdminDashboard = () => {
               onChange={(e) => handleFilterChange('tipoSolicitud', e.target.value)}
             >
               <option value="">Todos</option>
-              {tipos.map(tipo => (
+              {tipos
+                .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
+                .map(tipo => (
                 <option key={tipo.idTipoSolicitud} value={tipo.idTipoSolicitud}>
                   {tipo.tipoSolicitud}
                 </option>
@@ -194,57 +227,18 @@ const AdminDashboard = () => {
 
       {/* Lista de Tickets */}
       <TicketsSection>
-        {tickets.length === 0 ? (
+        {filteredTickets.length === 0 ? (
           <EmptyMessage>No se encontraron tickets</EmptyMessage>
         ) : (
-          tickets.map(ticket => (
-            <TicketCard key={ticket.idTicket}>
-              <TicketHeader>
-                <TicketNumber>#{ticket.idTicket}</TicketNumber>
-                <PriorityBadge priority={getPriorityColor(ticket.idPrioridad)}>
-                  {ticket.prioridades?.prioridad}
-                </PriorityBadge>
-              </TicketHeader>
-
-              <TicketBody>
-                <TicketInfo>
-                  <InfoRow>
-                    <strong>Empleado:</strong> {ticket.empleado} (#{ticket.codigoEmpleado})
-                  </InfoRow>
-                  <InfoRow>
-                    <strong>Tipo:</strong> {ticket.tiposSolicitud?.tipoSolicitud}
-                  </InfoRow>
-                  <InfoRow>
-                    <strong>Planta:</strong> {ticket.plantas?.planta}
-                  </InfoRow>
-                  <InfoRow>
-                    <strong>Fecha:</strong> {formatDate(ticket.fechaCreacion)}
-                  </InfoRow>
-                  <InfoRow>
-                    <strong>Descripción:</strong>
-                    <Description>{ticket.descripcion}</Description>
-                  </InfoRow>
-                  <InfoRow>
-                    <strong>Responsable:</strong> {getResponsable(ticket.idPlanta, ticket.idTipoSolicitud)}
-                  </InfoRow>
-                </TicketInfo>
-
-                <TicketActions>
-                  {ticket.atenciones && ticket.atenciones.length > 0 ? (
-                    <AtendedStatus>
-                      ✅ Atendido
-                      <small>
-                        {formatDate(ticket.atenciones[0].fechaAtencion)}
-                      </small>
-                    </AtendedStatus>
-                  ) : (
-                    <AttendButton onClick={() => handleAtender(ticket)}>
-                      📝 Atender
-                    </AttendButton>
-                  )}
-                </TicketActions>
-              </TicketBody>
-            </TicketCard>
+          filteredTickets.map(ticket => (
+            <TicketCard 
+              key={ticket.idTicket}
+              ticket={ticket}
+              onAtender={handleAtender}
+              getResponsable={getResponsable}
+              formatDate={formatDate}
+              getPriorityColor={getPriorityColor}
+            />
           ))
         )}
       </TicketsSection>
@@ -286,6 +280,8 @@ const AdminDashboard = () => {
           </ModalContent>
         </Modal>
       )}
+
+      {/* Modal de Detalles - removido ya que no es necesario */}
     </Container>
   );
 };
@@ -357,8 +353,8 @@ const LogoutButton = styled.button`
 const StatsSection = styled.div`
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.8rem;
+  margin-bottom: 0.8rem;
   flex-shrink: 0;
   
   @media (max-width: 768px) {
@@ -368,22 +364,38 @@ const StatsSection = styled.div`
 
 const StatCard = styled.div`
   background: white;
-  padding: 1rem;
+  padding: 0.8rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0,0,0,0.1);
   text-align: center;
-  transition: transform 0.2s ease;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  position: relative;
+  border: 2px solid ${props => props.active ? 'var(--color-primary)' : 'transparent'};
   
   &:hover {
     transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+  }
+
+  &::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 50%;
+    transform: translateX(-50%);
+    width: ${props => props.active ? '80%' : '0'};
+    height: 3px;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
   }
 `;
 
 const StatNumber = styled.div`
-  font-size: 1.8rem;
+  font-size: 1.5rem;
   font-weight: bold;
   color: var(--color-primary);
-  margin-bottom: 0.3rem;
+  margin-bottom: 0.2rem;
 `;
 
 const StatLabel = styled.div`
@@ -405,7 +417,7 @@ const FiltersRow = styled.div`
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 0.8rem;
-  margin-bottom: 0.8rem;
+  margin-bottom: 0.6rem;
   
   @media (max-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
@@ -471,6 +483,8 @@ const TicketsSection = styled.div`
   grid-template-columns: repeat(3, 1fr);
   gap: 1rem;
   padding-right: 0.5rem;
+  grid-auto-rows: 1fr;
+  align-content: start;
   
   @media (max-width: 1200px) {
     grid-template-columns: repeat(2, 1fr);
@@ -508,108 +522,6 @@ const EmptyMessage = styled.div`
   font-size: 1.1rem;
   background: white;
   border-radius: 8px;
-`;
-
-const TicketCard = styled.div`
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-  overflow: hidden;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-  }
-`;
-
-const TicketHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1rem;
-  background: #f8f9fa;
-  border-bottom: 1px solid #dee2e6;
-`;
-
-const TicketNumber = styled.h3`
-  margin: 0;
-  color: var(--color-primary);
-  font-size: 1.2rem;
-`;
-
-const PriorityBadge = styled.span`
-  background-color: ${props => props.priority};
-  color: white;
-  padding: 0.3rem 0.8rem;
-  border-radius: 12px;
-  font-size: 0.8rem;
-  font-weight: 600;
-`;
-
-const TicketBody = styled.div`
-  display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 1rem;
-  padding: 1rem;
-  
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const TicketInfo = styled.div`
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-`;
-
-const InfoRow = styled.div`
-  color: var(--color-primary);
-  font-size: 0.9rem;
-`;
-
-const Description = styled.div`
-  margin-top: 0.5rem;
-  padding: 0.5rem;
-  background: #f8f9fa;
-  border-radius: 4px;
-  font-style: italic;
-  color: var(--color-gray);
-`;
-
-const TicketActions = styled.div`
-  display: flex;
-  align-items: center;
-`;
-
-const AttendButton = styled.button`
-  background-color: var(--color-accent);
-  color: white;
-  border: none;
-  padding: 0.75rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  transition: all 0.2s ease;
-  
-  &:hover {
-    background-color: #e54a2e;
-    transform: translateY(-1px);
-  }
-`;
-
-const AtendedStatus = styled.div`
-  color: #28a745;
-  font-weight: 600;
-  text-align: center;
-  
-  small {
-    display: block;
-    color: var(--color-gray);
-    font-weight: normal;
-    margin-top: 0.25rem;
-  }
 `;
 
 const Modal = styled.div`
