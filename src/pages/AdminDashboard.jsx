@@ -1,26 +1,39 @@
-import { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { useAppAuth } from '../contexts/AuthContext.jsx';
-import { useAdminTickets, useTicketStats, useAsignaciones, useAtenciones } from '../utils/useAdminTickets.js';
-import { usePlantas, useTiposSolicitud, usePrioridades } from '../utils/useTickets.js';
-import TicketCard from '../components/TicketCard.jsx';
+import { useState, useEffect } from "react";
+import styled from "styled-components";
+import { useAppAuth } from "../contexts/AuthContext.jsx";
+import {
+  useAdminTickets,
+  useTicketStats,
+  useAsignaciones,
+  useAtenciones,
+} from "../utils/useAdminTickets.js";
+import {
+  usePlantas,
+  useTiposSolicitud,
+  usePrioridades,
+} from "../utils/useTickets.js";
+import TicketCard from "../components/TicketCard.jsx";
 
 const AdminDashboard = () => {
   const { user, logout } = useAppAuth();
   const [filters, setFilters] = useState({
-    planta: '',
-    tipoSolicitud: '',
-    prioridad: '',
-    empleado: '',
-    sortBy: 'fecha'
+    planta: "",
+    tipoSolicitud: "",
+    prioridad: "",
+    empleado: "",
+    sortBy: "fecha",
   });
-  const [statsFilter, setStatsFilter] = useState('todos'); // 'todos', 'sinAtender', 'respondidos'
+  const [statsFilter, setStatsFilter] = useState("todos"); // 'todos', 'sinAtender', 'respondidos'
   const [showModal, setShowModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
-  const [respuesta, setRespuesta] = useState('');
+  const [respuesta, setRespuesta] = useState("");
 
   // Hooks para datos
-  const { tickets, loading: loadingTickets, refetchTickets } = useAdminTickets(user);
+  const {
+    tickets,
+    loading: loadingTickets,
+    refetchTickets,
+  } = useAdminTickets(user);
   const stats = useTicketStats(tickets);
   const { getResponsable } = useAsignaciones();
   const { crearAtencion, loading: creatingAtencion } = useAtenciones();
@@ -36,47 +49,51 @@ const AdminDashboard = () => {
   }, [filters, user, refetchTickets]);
 
   const handleFilterChange = (field, value) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
-      [field]: value
+      [field]: value,
     }));
   };
 
   const handleAtender = (ticket) => {
     setSelectedTicket(ticket);
     setShowModal(true);
-    setRespuesta('');
+    setRespuesta("");
   };
 
   const handleSubmitAtencion = async () => {
     if (!respuesta.trim()) {
-      alert('Debe ingresar una respuesta');
+      alert("Debe ingresar una respuesta");
       return;
     }
 
-    const result = await crearAtencion(selectedTicket.idTicket, user.id, respuesta.trim());
-    
+    const result = await crearAtencion(
+      selectedTicket.idTicket,
+      user.id,
+      respuesta.trim()
+    );
+
     if (result.success) {
       setShowModal(false);
       setSelectedTicket(null);
-      setRespuesta('');
+      setRespuesta("");
       refetchTickets(filters); // Recargar tickets
-      alert('Atención registrada correctamente');
+      alert("Atención registrada correctamente");
     } else {
-      alert('Error al registrar la atención: ' + result.error);
+      alert("Error al registrar la atención: " + result.error);
     }
   };
 
   // Filtrar tickets según el filtro de estadísticas
-  const filteredTickets = tickets.filter(ticket => {
+  const filteredTickets = tickets.filter((ticket) => {
     const tieneAtencion = ticket.atenciones && ticket.atenciones.length > 0;
-    
+
     switch (statsFilter) {
-      case 'sinAtender':
+      case "sinAtender":
         return !tieneAtencion;
-      case 'respondidos':
+      case "respondidos":
         return tieneAtencion;
-      case 'todos':
+      case "todos":
       default:
         return true;
     }
@@ -89,20 +106,24 @@ const AdminDashboard = () => {
 
   const getPriorityColor = (idPrioridad) => {
     switch (idPrioridad) {
-      case 1: return '#dc3545'; // Alta - Rojo
-      case 2: return '#ffc107'; // Media - Amarillo
-      case 3: return '#28a745'; // Baja - Verde
-      default: return '#6c757d'; // Default - Gris
+      case 1:
+        return "#dc3545"; // Alta - Rojo
+      case 2:
+        return "#ffc107"; // Media - Amarillo
+      case 3:
+        return "#28a745"; // Baja - Verde
+      default:
+        return "#6c757d"; // Default - Gris
     }
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString('es-ES', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
+    return new Date(dateString).toLocaleDateString("es-ES", {
+      day: "2-digit",
+      month: "2-digit",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -122,30 +143,28 @@ const AdminDashboard = () => {
           <h1>Dashboard Administrativo</h1>
           <p>Bienvenido, {user?.nombre}</p>
         </AdminInfo>
-        <LogoutButton onClick={logout}>
-          🚪 Cerrar Sesión
-        </LogoutButton>
+        <LogoutButton onClick={logout}>🚪 Cerrar Sesión</LogoutButton>
       </Header>
 
       {/* Estadísticas */}
       <StatsSection>
-        <StatCard 
-          active={statsFilter === 'sinAtender'} 
-          onClick={() => handleStatsFilter('sinAtender')}
+        <StatCard
+          active={statsFilter === "sinAtender"}
+          onClick={() => handleStatsFilter("sinAtender")}
         >
           <StatNumber>{stats.sinAtender}</StatNumber>
           <StatLabel>Sin Atender</StatLabel>
         </StatCard>
-        <StatCard 
-          active={statsFilter === 'respondidos'} 
-          onClick={() => handleStatsFilter('respondidos')}
+        <StatCard
+          active={statsFilter === "respondidos"}
+          onClick={() => handleStatsFilter("respondidos")}
         >
           <StatNumber>{stats.respondidos}</StatNumber>
-          <StatLabel>Respondidos</StatLabel>
+          <StatLabel>Atendidos</StatLabel>
         </StatCard>
-        <StatCard 
-          active={statsFilter === 'todos'} 
-          onClick={() => handleStatsFilter('todos')}
+        <StatCard
+          active={statsFilter === "todos"}
+          onClick={() => handleStatsFilter("todos")}
         >
           <StatNumber>{stats.total}</StatNumber>
           <StatLabel>Totales</StatLabel>
@@ -157,12 +176,12 @@ const AdminDashboard = () => {
         <FiltersRow>
           <FilterGroup>
             <label>Planta:</label>
-            <select 
-              value={filters.planta} 
-              onChange={(e) => handleFilterChange('planta', e.target.value)}
+            <select
+              value={filters.planta}
+              onChange={(e) => handleFilterChange("planta", e.target.value)}
             >
               <option value="">Todas</option>
-              {plantas.map(planta => (
+              {plantas.map((planta) => (
                 <option key={planta.idPlanta} value={planta.idPlanta}>
                   {planta.planta}
                 </option>
@@ -172,30 +191,38 @@ const AdminDashboard = () => {
 
           <FilterGroup>
             <label>Tipo:</label>
-            <select 
-              value={filters.tipoSolicitud} 
-              onChange={(e) => handleFilterChange('tipoSolicitud', e.target.value)}
+            <select
+              value={filters.tipoSolicitud}
+              onChange={(e) =>
+                handleFilterChange("tipoSolicitud", e.target.value)
+              }
             >
               <option value="">Todos</option>
               {tipos
                 .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
-                .map(tipo => (
-                <option key={tipo.idTipoSolicitud} value={tipo.idTipoSolicitud}>
-                  {tipo.tipoSolicitud}
-                </option>
-              ))}
+                .map((tipo) => (
+                  <option
+                    key={tipo.idTipoSolicitud}
+                    value={tipo.idTipoSolicitud}
+                  >
+                    {tipo.tipoSolicitud}
+                  </option>
+                ))}
             </select>
           </FilterGroup>
 
           <FilterGroup>
             <label>Prioridad:</label>
-            <select 
-              value={filters.prioridad} 
-              onChange={(e) => handleFilterChange('prioridad', e.target.value)}
+            <select
+              value={filters.prioridad}
+              onChange={(e) => handleFilterChange("prioridad", e.target.value)}
             >
               <option value="">Todas</option>
-              {prioridades.map(prioridad => (
-                <option key={prioridad.idPrioridad} value={prioridad.idPrioridad}>
+              {prioridades.map((prioridad) => (
+                <option
+                  key={prioridad.idPrioridad}
+                  value={prioridad.idPrioridad}
+                >
                   {prioridad.prioridad}
                 </option>
               ))}
@@ -204,20 +231,20 @@ const AdminDashboard = () => {
 
           <FilterGroup>
             <label>Empleado:</label>
-            <input 
+            <input
               type="text"
               placeholder="Código o nombre..."
               value={filters.empleado}
-              onChange={(e) => handleFilterChange('empleado', e.target.value)}
+              onChange={(e) => handleFilterChange("empleado", e.target.value)}
             />
           </FilterGroup>
         </FiltersRow>
 
         <SortSection>
           <label>Ordenar por:</label>
-          <select 
-            value={filters.sortBy} 
-            onChange={(e) => handleFilterChange('sortBy', e.target.value)}
+          <select
+            value={filters.sortBy}
+            onChange={(e) => handleFilterChange("sortBy", e.target.value)}
           >
             <option value="fecha">Fecha de creación</option>
             <option value="prioridad">Prioridad</option>
@@ -230,8 +257,8 @@ const AdminDashboard = () => {
         {filteredTickets.length === 0 ? (
           <EmptyMessage>No se encontraron tickets</EmptyMessage>
         ) : (
-          filteredTickets.map(ticket => (
-            <TicketCard 
+          filteredTickets.map((ticket) => (
+            <TicketCard
               key={ticket.idTicket}
               ticket={ticket}
               onAtender={handleAtender}
@@ -251,12 +278,16 @@ const AdminDashboard = () => {
               <h3>Atender Ticket #{selectedTicket?.idTicket}</h3>
               <CloseButton onClick={() => setShowModal(false)}>×</CloseButton>
             </ModalHeader>
-            
+
             <ModalBody>
-              <p><strong>Empleado:</strong> {selectedTicket?.empleado}</p>
-              <p><strong>Descripción:</strong></p>
+              <p>
+                <strong>Empleado:</strong> {selectedTicket?.empleado}
+              </p>
+              <p>
+                <strong>Descripción:</strong>
+              </p>
               <p>{selectedTicket?.descripcion}</p>
-              
+
               <label>Respuesta:</label>
               <ResponseTextArea
                 rows="4"
@@ -265,16 +296,16 @@ const AdminDashboard = () => {
                 placeholder="Escriba su respuesta al ticket..."
               />
             </ModalBody>
-            
+
             <ModalFooter>
               <CancelButton onClick={() => setShowModal(false)}>
                 Cancelar
               </CancelButton>
-              <SubmitButton 
-                onClick={handleSubmitAtencion} 
+              <SubmitButton
+                onClick={handleSubmitAtencion}
                 disabled={creatingAtencion}
               >
-                {creatingAtencion ? 'Enviando...' : 'Enviar Respuesta'}
+                {creatingAtencion ? "Enviando..." : "Enviar Respuesta"}
               </SubmitButton>
             </ModalFooter>
           </ModalContent>
@@ -314,7 +345,7 @@ const Header = styled.header`
   padding: 1rem;
   background: white;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
 `;
 
@@ -356,7 +387,7 @@ const StatsSection = styled.div`
   gap: 0.8rem;
   margin-bottom: 0.8rem;
   flex-shrink: 0;
-  
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
@@ -366,25 +397,26 @@ const StatCard = styled.div`
   background: white;
   padding: 0.8rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   text-align: center;
   transition: all 0.2s ease;
   cursor: pointer;
   position: relative;
-  border: 2px solid ${props => props.active ? 'var(--color-primary)' : 'transparent'};
-  
+  border: 2px solid
+    ${(props) => (props.active ? "var(--color-primary)" : "transparent")};
+
   &:hover {
     transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
   }
 
   &::after {
-    content: '';
+    content: "";
     position: absolute;
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: ${props => props.active ? '80%' : '0'};
+    width: ${(props) => (props.active ? "80%" : "0")};
     height: 3px;
     background: var(--color-primary);
     transition: width 0.3s ease;
@@ -408,7 +440,7 @@ const FiltersSection = styled.div`
   background: white;
   padding: 1rem;
   border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
   flex-shrink: 0;
 `;
@@ -418,11 +450,11 @@ const FiltersRow = styled.div`
   grid-template-columns: repeat(4, 1fr);
   gap: 0.8rem;
   margin-bottom: 0.6rem;
-  
+
   @media (max-width: 768px) {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   @media (max-width: 480px) {
     grid-template-columns: 1fr;
   }
@@ -431,20 +463,21 @@ const FiltersRow = styled.div`
 const FilterGroup = styled.div`
   display: flex;
   flex-direction: column;
-  
+
   label {
     margin-bottom: 0.3rem;
     font-weight: 500;
     color: var(--color-primary);
     font-size: 0.85rem;
   }
-  
-  select, input {
+
+  select,
+  input {
     padding: 0.4rem;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 0.85rem;
-    
+
     &:focus {
       outline: none;
       border-color: var(--color-accent);
@@ -456,19 +489,19 @@ const SortSection = styled.div`
   display: flex;
   align-items: center;
   gap: 0.8rem;
-  
+
   label {
     font-weight: 500;
     color: var(--color-primary);
     font-size: 0.85rem;
   }
-  
+
   select {
     padding: 0.4rem;
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 0.85rem;
-    
+
     &:focus {
       outline: none;
       border-color: var(--color-accent);
@@ -485,29 +518,29 @@ const TicketsSection = styled.div`
   padding-right: 0.5rem;
   grid-auto-rows: 1fr;
   align-content: start;
-  
+
   @media (max-width: 1200px) {
     grid-template-columns: repeat(2, 1fr);
   }
-  
+
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
   }
-  
+
   /* Estilo del scrollbar */
   &::-webkit-scrollbar {
     width: 8px;
   }
-  
+
   &::-webkit-scrollbar-track {
     background: #f1f1f1;
     border-radius: 4px;
   }
-  
+
   &::-webkit-scrollbar-thumb {
     background: #c1c1c1;
     border-radius: 4px;
-    
+
     &:hover {
       background: #a8a8a8;
     }
@@ -552,7 +585,7 @@ const ModalHeader = styled.div`
   align-items: center;
   padding: 1.5rem;
   border-bottom: 1px solid #dee2e6;
-  
+
   h3 {
     margin: 0;
     color: var(--color-primary);
@@ -565,7 +598,7 @@ const CloseButton = styled.button`
   font-size: 1.5rem;
   cursor: pointer;
   color: var(--color-gray);
-  
+
   &:hover {
     color: var(--color-primary);
   }
@@ -573,12 +606,12 @@ const CloseButton = styled.button`
 
 const ModalBody = styled.div`
   padding: 1.5rem;
-  
+
   p {
     margin-bottom: 1rem;
     color: var(--color-primary);
   }
-  
+
   label {
     display: block;
     margin-bottom: 0.5rem;
@@ -594,7 +627,7 @@ const ResponseTextArea = styled.textarea`
   border-radius: 4px;
   font-family: inherit;
   resize: vertical;
-  
+
   &:focus {
     outline: none;
     border-color: var(--color-accent);
@@ -616,7 +649,7 @@ const CancelButton = styled.button`
   padding: 0.75rem 1.5rem;
   border-radius: 6px;
   cursor: pointer;
-  
+
   &:hover {
     background: #5a6268;
   }
@@ -629,11 +662,11 @@ const SubmitButton = styled.button`
   padding: 0.75rem 1.5rem;
   border-radius: 6px;
   cursor: pointer;
-  
+
   &:hover:not(:disabled) {
     background-color: #e54a2e;
   }
-  
+
   &:disabled {
     background-color: var(--color-gray);
     cursor: not-allowed;

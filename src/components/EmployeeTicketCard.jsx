@@ -1,11 +1,10 @@
 import styled from "styled-components";
 
-const TicketCard = ({
+const EmployeeTicketCard = ({
   ticket,
-  onAtender,
-  getResponsable,
   formatDate,
   getPriorityColor,
+  isResolved = false
 }) => {
   // Función para formatear fecha corta (dd/mm/aa, hh:mm)
   const formatShortDate = (dateString) => {
@@ -26,8 +25,8 @@ const TicketCard = ({
   };
 
   return (
-    <Card>
-      <TopBar onClick={(e) => e.stopPropagation()}>
+    <Card isResolved={isResolved}>
+      <TopBar>
         <LeftSection>
           <PriorityBadge priority={getPriorityColor(ticket.idPrioridad)}>
             {ticket.prioridades?.prioridad}
@@ -36,57 +35,57 @@ const TicketCard = ({
         </LeftSection>
 
         <RightSection>
-          {ticket.atenciones && ticket.atenciones.length > 0 ? (
-            <AtendedStatus>
-              Atendido el {formatShortDate(ticket.atenciones[0].fechaAtencion)}
-            </AtendedStatus>
-          ) : (
-            <AttendButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onAtender(ticket);
-              }}
-            >
-              Atender
-            </AttendButton>
-          )}
+          <StatusBadge isResolved={isResolved}>
+            {isResolved ? "Resuelto" : "Pendiente"}
+          </StatusBadge>
         </RightSection>
       </TopBar>
 
-      <Content onClick={(e) => e.stopPropagation()}>
-        <InfoRow>
-          <InfoLabel>Empleado:</InfoLabel>
-          <InfoValue>
-            {ticket.empleado} (#{ticket.codigoEmpleado})
-          </InfoValue>
-        </InfoRow>
-
+      <Content>
         <InfoRow>
           <InfoLabel>Tipo:</InfoLabel>
           <InfoValue>{ticket.tiposSolicitud?.tipoSolicitud}</InfoValue>
         </InfoRow>
-
+        
         <InfoRow>
           <InfoLabel>Planta:</InfoLabel>
           <InfoValue>{ticket.plantas?.planta}</InfoValue>
         </InfoRow>
-
+        
         <InfoRow>
-          <InfoLabel>Fecha:</InfoLabel>
+          <InfoLabel>Fecha creación:</InfoLabel>
           <InfoValue>{formatDate(ticket.fechaCreacion)}</InfoValue>
         </InfoRow>
-        <InfoRow>
-          <InfoLabel>Responsable:</InfoLabel>
-          <InfoValue>
-            {getResponsable(ticket.idPlanta, ticket.idTipoSolicitud)}
-          </InfoValue>
-        </InfoRow>
-
+        
         <DescriptionSection>
+          <InfoLabel>Descripción:</InfoLabel>
           <Description>
             {getTruncatedDescription(ticket.descripcion)}
           </Description>
         </DescriptionSection>
+
+        {isResolved && ticket.atenciones && ticket.atenciones.length > 0 && (
+          <>
+            <InfoRow>
+              <InfoLabel>Fecha resolución:</InfoLabel>
+              <InfoValue>
+                {formatShortDate(ticket.atenciones[0].fechaAtencion)}
+              </InfoValue>
+            </InfoRow>
+            
+            <ResponseSection>
+              <InfoLabel>Respuesta:</InfoLabel>
+              <ResponseContent>
+                {ticket.atenciones[0].respuesta}
+              </ResponseContent>
+              {ticket.atenciones[0].usuarios?.nombre && (
+                <ResponsableText>
+                  Atendido por: {ticket.atenciones[0].usuarios.nombre}
+                </ResponsableText>
+              )}
+            </ResponseSection>
+          </>
+        )}
       </Content>
     </Card>
   );
@@ -101,12 +100,11 @@ const Card = styled.div`
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 270px;
-  max-height: 270px;
+  margin-bottom: 1rem;
+  border-left: 4px solid ${props => props.isResolved ? '#28a745' : '#ffc107'};
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 `;
@@ -115,7 +113,7 @@ const TopBar = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 1rem;
+  padding: 0.7rem 1rem;
   background: #f8f9fa;
   border-bottom: 1px solid #dee2e6;
 `;
@@ -133,8 +131,6 @@ const RightSection = styled.div`
 
 const Content = styled.div`
   padding: 1rem;
-  flex: 1;
-  overflow-y: auto;
 `;
 
 const TicketNumber = styled.h3`
@@ -147,6 +143,16 @@ const TicketNumber = styled.h3`
 const PriorityBadge = styled.span`
   background-color: ${(props) => props.priority};
   color: white;
+  padding: 0.25rem 0.6rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+`;
+
+const StatusBadge = styled.span`
+  background-color: ${props => props.isResolved ? '#28a745' : '#ffc107'};
+  color: ${props => props.isResolved ? 'white' : '#212529'};
   padding: 0.25rem 0.6rem;
   border-radius: 10px;
   font-size: 0.75rem;
@@ -188,36 +194,35 @@ const Description = styled.div`
   line-height: 1.4;
   border-left: 3px solid var(--color-accent);
   font-size: 0.9rem;
-
+  
   /* Limitar a una sola línea */
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 `;
 
-const AttendButton = styled.button`
-  background-color: var(--color-bg);
-  color: var(--color-primary);
-  border: none;
-  padding: 0.4rem 1rem;
+const ResponseSection = styled.div`
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #dee2e6;
+`;
+
+const ResponseContent = styled.div`
+  margin-top: 0.5rem;
+  padding: 0.8rem;
+  background: #d4edda;
   border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: var(--color-accent);
-    color: white;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-  }
+  color: #155724;
+  line-height: 1.4;
+  border-left: 3px solid #28a745;
+  font-size: 0.9rem;
 `;
 
-const AtendedStatus = styled.div`
-  color: #28a745;
-  font-weight: 500;
-  font-size: 0.85rem;
+const ResponsableText = styled.div`
+  margin-top: 0.5rem;
+  font-size: 0.8rem;
+  color: #6c757d;
+  font-style: italic;
 `;
 
-export default TicketCard;
+export default EmployeeTicketCard;

@@ -2,7 +2,7 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import { useEsquemasPago, useTiposSolicitud, usePrioridades, useTickets } from '../utils/useTickets.js';
 
-const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout }) => {
+const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBack }) => {
   const [formData, setFormData] = useState({
     idEsquemaPago: '',
     idTipoSolicitud: '',
@@ -77,9 +77,16 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout }) =>
     <Container>
       {/* Header con información del empleado */}
       <EmployeeHeader>
-        <EmployeeTitle>
-          #{employeeData.codigoEmpleado} | {employeeData.empleado}
-        </EmployeeTitle>
+        <HeaderLeft>
+          {onBack && (
+            <BackButton onClick={onBack} type="button" title="Volver">
+              ← Volver
+            </BackButton>
+          )}
+          <EmployeeTitle>
+            #{employeeData.codigoEmpleado} | {employeeData.empleado}
+          </EmployeeTitle>
+        </HeaderLeft>
         <LogoutButton onClick={onLogout} type="button" title="Cerrar sesión">
           🚪
         </LogoutButton>
@@ -333,6 +340,30 @@ const EmployeeHeader = styled.div`
   max-width: 1000px;
   margin: 0 auto 1rem auto;
   width: 100%;
+`;
+
+const HeaderLeft = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+`;
+
+const BackButton = styled.button`
+  background: rgba(255, 255, 255, 0.2);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.3);
+    transform: translateX(-2px);
+  }
 `;
 
 const EmployeeTitle = styled.h2`
