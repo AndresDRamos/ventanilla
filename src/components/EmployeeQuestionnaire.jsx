@@ -92,33 +92,6 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBa
         </LogoutButton>
       </EmployeeHeader>
 
-      {/* Info Row con beneficios en una sola fila */}
-      <BenefitsRow>
-        <BenefitCard>
-          <BenefitIcon>⚡</BenefitIcon>
-          <BenefitTitle>Fácil de usar</BenefitTitle>
-          <BenefitDescription>
-            Interfaz intuitiva y simple para crear tu solicitud
-          </BenefitDescription>
-        </BenefitCard>
-        
-        <BenefitCard>
-          <BenefitIcon>🚀</BenefitIcon>
-          <BenefitTitle>Respuesta rápida</BenefitTitle>
-          <BenefitDescription>
-            Procesamos tu solicitud de manera eficiente
-          </BenefitDescription>
-        </BenefitCard>
-        
-        <BenefitCard>
-          <BenefitIcon>📋</BenefitIcon>
-          <BenefitTitle>Seguimiento</BenefitTitle>
-          <BenefitDescription>
-            Mantente informado del estado de tu solicitud
-          </BenefitDescription>
-        </BenefitCard>
-      </BenefitsRow>
-
       {/* Formulario del cuestionario */}
       <FormContainer>
         <FormTitle>Crear Nueva Solicitud</FormTitle>
@@ -206,15 +179,15 @@ const EmployeeQuestionnaire = ({ employeeData, onTicketSubmitted, onLogout, onBa
 
 const Container = styled.div`
   max-width: 1200px;
-  max-height: 100vh;
+  min-height: 100vh;
   margin: 0 auto;
-  padding: 1rem 2rem;
-  overflow: hidden;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
   
   @media (max-width: 768px) {
-    padding: 1rem;
+    padding: 0.5rem;
+    max-width: 100vw;
   }
 `;
 
@@ -237,7 +210,7 @@ const Form = styled.form`
 
 const FormGrid = styled.div`
   display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
   gap: 1rem;
   margin-bottom: 1rem;
   
@@ -336,10 +309,15 @@ const EmployeeHeader = styled.div`
   background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
   border-radius: 8px;
   color: white;
-  position: relative;
   max-width: 1000px;
   margin: 0 auto 1rem auto;
   width: 100%;
+  
+  @media (max-width: 768px) {
+    padding: 0.6rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 `;
 
 const HeaderLeft = styled.div`
@@ -373,6 +351,11 @@ const EmployeeTitle = styled.h2`
   letter-spacing: 0.5px;
   flex: 1;
   text-align: center;
+  
+  @media (max-width: 768px) {
+    font-size: 1rem;
+    text-align: left;
+  }
 `;
 
 const LogoutButton = styled.button`
@@ -388,8 +371,6 @@ const LogoutButton = styled.button`
   align-items: center;
   justify-content: center;
   transition: all 0.2s ease;
-  position: absolute;
-  right: 0.8rem;
 
   &:hover {
     background: rgba(255, 255, 255, 0.3);
@@ -399,54 +380,12 @@ const LogoutButton = styled.button`
   &:active {
     transform: scale(0.95);
   }
-`;
-
-const BenefitsRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
-  max-width: 1000px;
-  margin: 0 auto 1rem auto;
-  width: 100%;
   
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 0.8rem;
+    width: 35px;
+    height: 35px;
+    font-size: 1rem;
   }
-`;
-
-const BenefitCard = styled.div`
-  text-align: center;
-  padding: 1rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px var(--color-shadow);
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-  
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
-  }
-`;
-
-const BenefitIcon = styled.div`
-  font-size: 1.5rem;
-  margin-bottom: 0.3rem;
-`;
-
-const BenefitTitle = styled.h3`
-  font-size: 0.95rem;
-  font-weight: 600;
-  color: var(--color-primary);
-  margin: 0 0 0.3rem 0;
-`;
-
-const BenefitDescription = styled.p`
-  font-size: 0.8rem;
-  color: var(--color-gray);
-  margin: 0;
-  line-height: 1.3;
 `;
 
 const FormContainer = styled.div`

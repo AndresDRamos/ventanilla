@@ -23,6 +23,15 @@ const AdminDashboard = () => {
     empleado: "",
     sortBy: "fecha",
   });
+  // Filtros temporales que se aplican solo al hacer clic en "Aplicar"
+  const [tempFilters, setTempFilters] = useState({
+    planta: "",
+    tipoSolicitud: "",
+    prioridad: "",
+    empleado: "",
+    sortBy: "fecha",
+  });
+  const [filtersExpanded, setFiltersExpanded] = useState(false);
   const [statsFilter, setStatsFilter] = useState("todos"); // 'todos', 'sinAtender', 'respondidos'
   const [showModal, setShowModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
@@ -48,11 +57,27 @@ const AdminDashboard = () => {
     }
   }, [filters, user, refetchTickets]);
 
-  const handleFilterChange = (field, value) => {
-    setFilters((prev) => ({
+  const handleTempFilterChange = (field, value) => {
+    setTempFilters((prev) => ({
       ...prev,
       [field]: value,
     }));
+  };
+
+  const handleApplyFilters = () => {
+    setFilters(tempFilters);
+  };
+
+  const handleClearFilters = () => {
+    const clearedFilters = {
+      planta: "",
+      tipoSolicitud: "",
+      prioridad: "",
+      empleado: "",
+      sortBy: "fecha",
+    };
+    setTempFilters(clearedFilters);
+    setFilters(clearedFilters);
   };
 
   const handleAtender = (ticket) => {
@@ -173,83 +198,103 @@ const AdminDashboard = () => {
 
       {/* Filtros */}
       <FiltersSection>
-        <FiltersRow>
-          <FilterGroup>
-            <label>Planta:</label>
-            <select
-              value={filters.planta}
-              onChange={(e) => handleFilterChange("planta", e.target.value)}
-            >
-              <option value="">Todas</option>
-              {plantas.map((planta) => (
-                <option key={planta.idPlanta} value={planta.idPlanta}>
-                  {planta.planta}
-                </option>
-              ))}
-            </select>
-          </FilterGroup>
-
-          <FilterGroup>
-            <label>Tipo:</label>
-            <select
-              value={filters.tipoSolicitud}
-              onChange={(e) =>
-                handleFilterChange("tipoSolicitud", e.target.value)
-              }
-            >
-              <option value="">Todos</option>
-              {tipos
-                .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
-                .map((tipo) => (
-                  <option
-                    key={tipo.idTipoSolicitud}
-                    value={tipo.idTipoSolicitud}
-                  >
-                    {tipo.tipoSolicitud}
-                  </option>
-                ))}
-            </select>
-          </FilterGroup>
-
-          <FilterGroup>
-            <label>Prioridad:</label>
-            <select
-              value={filters.prioridad}
-              onChange={(e) => handleFilterChange("prioridad", e.target.value)}
-            >
-              <option value="">Todas</option>
-              {prioridades.map((prioridad) => (
-                <option
-                  key={prioridad.idPrioridad}
-                  value={prioridad.idPrioridad}
+        <FiltersHeader onClick={() => setFiltersExpanded(!filtersExpanded)}>
+          <h3>Filtros</h3>
+          <ExpandIcon expanded={filtersExpanded}>
+            {filtersExpanded ? "▲" : "▼"}
+          </ExpandIcon>
+        </FiltersHeader>
+        
+        {filtersExpanded && (
+          <FiltersContent>
+            <FiltersRow>
+              <FilterGroup>
+                <label>Planta:</label>
+                <select
+                  value={tempFilters.planta}
+                  onChange={(e) => handleTempFilterChange("planta", e.target.value)}
                 >
-                  {prioridad.prioridad}
-                </option>
-              ))}
-            </select>
-          </FilterGroup>
+                  <option value="">Todas</option>
+                  {plantas.map((planta) => (
+                    <option key={planta.idPlanta} value={planta.idPlanta}>
+                      {planta.planta}
+                    </option>
+                  ))}
+                </select>
+              </FilterGroup>
 
-          <FilterGroup>
-            <label>Empleado:</label>
-            <input
-              type="text"
-              placeholder="Código o nombre..."
-              value={filters.empleado}
-              onChange={(e) => handleFilterChange("empleado", e.target.value)}
-            />
-          </FilterGroup>
-        </FiltersRow>
+              <FilterGroup>
+                <label>Tipo:</label>
+                <select
+                  value={tempFilters.tipoSolicitud}
+                  onChange={(e) =>
+                    handleTempFilterChange("tipoSolicitud", e.target.value)
+                  }
+                >
+                  <option value="">Todos</option>
+                  {tipos
+                    .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
+                    .map((tipo) => (
+                      <option
+                        key={tipo.idTipoSolicitud}
+                        value={tipo.idTipoSolicitud}
+                      >
+                        {tipo.tipoSolicitud}
+                      </option>
+                    ))}
+                </select>
+              </FilterGroup>
 
-        <SortSection>
-          <label>Ordenar por:</label>
-          <select
-            value={filters.sortBy}
-            onChange={(e) => handleFilterChange("sortBy", e.target.value)}
-          >
-            <option value="fecha">Fecha de creación</option>
-            <option value="prioridad">Prioridad</option>
-          </select>
-        </SortSection>
+              <FilterGroup>
+                <label>Prioridad:</label>
+                <select
+                  value={tempFilters.prioridad}
+                  onChange={(e) => handleTempFilterChange("prioridad", e.target.value)}
+                >
+                  <option value="">Todas</option>
+                  {prioridades.map((prioridad) => (
+                    <option
+                      key={prioridad.idPrioridad}
+                      value={prioridad.idPrioridad}
+                    >
+                      {prioridad.prioridad}
+                    </option>
+                  ))}
+                </select>
+              </FilterGroup>
+
+              <FilterGroup>
+                <label>Empleado:</label>
+                <input
+                  type="text"
+                  placeholder="Código o nombre..."
+                  value={tempFilters.empleado}
+                  onChange={(e) => handleTempFilterChange("empleado", e.target.value)}
+                />
+              </FilterGroup>
+            </FiltersRow>
+
+            <SortSection>
+              <label>Ordenar por:</label>
+              <select
+                value={tempFilters.sortBy}
+                onChange={(e) => handleTempFilterChange("sortBy", e.target.value)}
+              >
+                <option value="fecha">Fecha de creación</option>
+                <option value="prioridad">Prioridad</option>
+              </select>
+            </SortSection>
+
+            <FilterButtons>
+              <ClearButton onClick={handleClearFilters}>
+                Limpiar
+              </ClearButton>
+              <ApplyButton onClick={handleApplyFilters}>
+                Aplicar
+              </ApplyButton>
+            </FilterButtons>
+          </FiltersContent>
+        )}
       </FiltersSection>
 
       {/* Lista de Tickets */}
@@ -326,6 +371,11 @@ const Container = styled.div`
   margin: 0 auto;
   padding: 1rem;
   background-color: #f8f9fa;
+  
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+    height: 100vh;
+  }
 `;
 
 const LoadingMessage = styled.div`
@@ -347,6 +397,12 @@ const Header = styled.header`
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    padding: 0.8rem;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
 `;
 
 const AdminInfo = styled.div`
@@ -354,12 +410,20 @@ const AdminInfo = styled.div`
     margin: 0;
     color: var(--color-primary);
     font-size: 1.5rem;
+    
+    @media (max-width: 768px) {
+      font-size: 1.2rem;
+    }
   }
 
   p {
     margin: 0.3rem 0 0 0;
     color: var(--color-gray);
     font-size: 0.9rem;
+    
+    @media (max-width: 768px) {
+      font-size: 0.8rem;
+    }
   }
 `;
 
@@ -389,7 +453,8 @@ const StatsSection = styled.div`
   flex-shrink: 0;
 
   @media (max-width: 768px) {
-    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    margin-bottom: 0.6rem;
   }
 `;
 
@@ -404,6 +469,10 @@ const StatCard = styled.div`
   position: relative;
   border: 2px solid
     ${(props) => (props.active ? "var(--color-primary)" : "transparent")};
+
+  @media (max-width: 768px) {
+    padding: 0.5rem;
+  }
 
   &:hover {
     transform: translateY(-2px);
@@ -428,31 +497,83 @@ const StatNumber = styled.div`
   font-weight: bold;
   color: var(--color-primary);
   margin-bottom: 0.2rem;
+  
+  @media (max-width: 768px) {
+    font-size: 1.2rem;
+    margin-bottom: 0.1rem;
+  }
 `;
 
 const StatLabel = styled.div`
   color: var(--color-gray);
   font-weight: 500;
   font-size: 0.9rem;
+  
+  @media (max-width: 768px) {
+    font-size: 0.75rem;
+  }
 `;
 
 const FiltersSection = styled.div`
   background: white;
-  padding: 1rem;
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
   flex-shrink: 0;
+  
+  @media (max-width: 768px) {
+    padding: 0;
+  }
+`;
+
+const FiltersHeader = styled.div`
+  padding: 1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  border-bottom: ${props => props.expanded ? '1px solid #eee' : 'none'};
+  
+  h3 {
+    margin: 0;
+    color: var(--color-primary);
+    font-size: 1.1rem;
+  }
+  
+  &:hover {
+    background-color: #f8f9fa;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.8rem;
+  }
+`;
+
+const ExpandIcon = styled.span`
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  transition: transform 0.2s ease;
+`;
+
+const FiltersContent = styled.div`
+  padding: 1rem;
+  padding-top: 0.5rem;
+  
+  @media (max-width: 768px) {
+    padding: 0.8rem;
+    padding-top: 0.5rem;
+  }
 `;
 
 const FiltersRow = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 0.8rem;
   margin-bottom: 0.6rem;
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
   }
 
   @media (max-width: 480px) {
@@ -489,6 +610,7 @@ const SortSection = styled.div`
   display: flex;
   align-items: center;
   gap: 0.8rem;
+  margin-bottom: 1rem;
 
   label {
     font-weight: 500;
@@ -509,22 +631,74 @@ const SortSection = styled.div`
   }
 `;
 
+const FilterButtons = styled.div`
+  display: flex;
+  justify-content: space-between;
+  gap: 0.8rem;
+  margin-top: 1rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid #eee;
+  
+  @media (max-width: 480px) {
+    flex-direction: column;
+    gap: 0.6rem;
+  }
+`;
+
+const ApplyButton = styled.button`
+  background-color: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  &:hover:not(:disabled) {
+    background-color: #e54a2e;
+  }
+
+  &:disabled {
+    background-color: var(--color-gray);
+    cursor: not-allowed;
+  }
+`;
+
+const ClearButton = styled.button`
+  background: #6c757d;
+  color: white;
+  border: none;
+  padding: 0.6rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+
+  &:hover {
+    background: #5a6268;
+  }
+`;
+
 const TicketsSection = styled.div`
   flex: 1;
   overflow-y: auto;
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
   gap: 1rem;
   padding-right: 0.5rem;
   grid-auto-rows: 1fr;
   align-content: start;
 
   @media (max-width: 1200px) {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
   }
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
+    gap: 0.8rem;
+    padding: 0.5rem;
+    padding-right: 0.5rem;
   }
 
   /* Estilo del scrollbar */
