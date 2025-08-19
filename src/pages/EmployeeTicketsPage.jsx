@@ -177,77 +177,80 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
       </FixedContent>
 
       <ScrollableTicketsArea>
-        {loading ? (
-          <LoadingMessage>Cargando tickets...</LoadingMessage>
-        ) : error ? (
-          <ErrorMessage>Error al cargar tickets: {error}</ErrorMessage>
-        ) : (
-          <TicketsContainer>
-            <TicketsSection>
-              {activeTab === "pending" ? (
-                <>
-                  {pendingTickets.length === 0 ? (
-                    <EmptyMessage>
-                      <EmptyIcon>📋</EmptyIcon>
-                      <EmptyTitle>No tienes tickets pendientes</EmptyTitle>
-                      <EmptySubtitle>
-                        Aquí aparecerán los tickets que hayas creado y aún no
-                        han sido atendidos.
-                      </EmptySubtitle>
-                    </EmptyMessage>
-                  ) : (
-                    pendingTickets.map((ticket) => (
-                      <TicketCard
-                        key={ticket.idTicket}
-                        ticket={ticket}
-                        mode="employee"
-                        formatDate={formatDate}
-                        getPriorityColor={getPriorityColor}
-                        isResolved={false}
-                        isExpanded={expandedTicketId === ticket.idTicket}
-                        onToggleExpand={handleToggleExpand}
-                        onShowDetails={handleShowDetails}
-                      />
-                    ))
-                  )}
-                </>
-              ) : (
-                <>
-                  {resolvedTickets.length === 0 ? (
-                    <EmptyMessage>
-                      <EmptyIcon>✅</EmptyIcon>
-                      <EmptyTitle>No tienes tickets resueltos</EmptyTitle>
-                      <EmptySubtitle>
-                        Aquí aparecerán los tickets que hayan sido atendidos.
-                      </EmptySubtitle>
-                    </EmptyMessage>
-                  ) : (
-                    resolvedTickets.map((ticket) => (
-                      <TicketCard
-                        key={ticket.idTicket}
-                        ticket={ticket}
-                        mode="employee"
-                        formatDate={formatDate}
-                        getPriorityColor={getPriorityColor}
-                        isResolved={true}
-                        isExpanded={expandedTicketId === ticket.idTicket}
-                        onToggleExpand={handleToggleExpand}
-                        onShowDetails={handleShowDetails}
-                      />
-                    ))
-                  )}
-                </>
-              )}
-            </TicketsSection>
-
-            <CreateTicketSection>
-              <CreateTicketButton onClick={() => setShowNewTicket(true)}>
-                + Crear Nuevo Ticket
-              </CreateTicketButton>
-            </CreateTicketSection>
-          </TicketsContainer>
-        )}
+        <TicketsContainer>
+          <TicketsSection>
+            {loading ? (
+              <LoadingMessage>Cargando tickets...</LoadingMessage>
+            ) : error ? (
+              <ErrorMessage>Error al cargar tickets: {error}</ErrorMessage>
+            ) : (
+              <>
+                {activeTab === "pending" ? (
+                  <>
+                    {pendingTickets.length === 0 ? (
+                      <EmptyMessage>
+                        <EmptyIcon>📋</EmptyIcon>
+                        <EmptyTitle>No tienes tickets pendientes</EmptyTitle>
+                        <EmptySubtitle>
+                          Aquí aparecerán los tickets que hayas creado y aún no
+                          han sido atendidos.
+                        </EmptySubtitle>
+                      </EmptyMessage>
+                    ) : (
+                      pendingTickets.map((ticket) => (
+                        <TicketCard
+                          key={ticket.idTicket}
+                          ticket={ticket}
+                          mode="employee"
+                          formatDate={formatDate}
+                          getPriorityColor={getPriorityColor}
+                          isResolved={false}
+                          isExpanded={expandedTicketId === ticket.idTicket}
+                          onToggleExpand={handleToggleExpand}
+                          onShowDetails={handleShowDetails}
+                        />
+                      ))
+                    )}
+                  </>
+                ) : (
+                  <>
+                    {resolvedTickets.length === 0 ? (
+                      <EmptyMessage>
+                        <EmptyIcon>✅</EmptyIcon>
+                        <EmptyTitle>No tienes tickets resueltos</EmptyTitle>
+                        <EmptySubtitle>
+                          Aquí aparecerán los tickets que hayan sido atendidos.
+                        </EmptySubtitle>
+                      </EmptyMessage>
+                    ) : (
+                      resolvedTickets.map((ticket) => (
+                        <TicketCard
+                          key={ticket.idTicket}
+                          ticket={ticket}
+                          mode="employee"
+                          formatDate={formatDate}
+                          getPriorityColor={getPriorityColor}
+                          isResolved={true}
+                          isExpanded={expandedTicketId === ticket.idTicket}
+                          onToggleExpand={handleToggleExpand}
+                          onShowDetails={handleShowDetails}
+                        />
+                      ))
+                    )}
+                  </>
+                )}
+              </>
+            )}
+          </TicketsSection>
+        </TicketsContainer>
       </ScrollableTicketsArea>
+
+      {/* Botón fijo para crear ticket */}
+      <CreateTicketSection>
+        <CreateTicketButton onClick={() => setShowNewTicket(true)}>
+          + Crear Nuevo Ticket
+        </CreateTicketButton>
+      </CreateTicketSection>
 
       {/* Modal de Detalles */}
       {showDetailModal && (
@@ -328,7 +331,6 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
 // Styled Components
 const Container = styled.div`
   min-height: 100vh;
-
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -430,7 +432,7 @@ const TicketsContainer = styled.div`
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  min-height: 100vw;
+  flex: 1;
 `;
 
 const Tab = styled.button`
@@ -458,6 +460,7 @@ const TicketsSection = styled.section`
   padding: 1rem;
   align-content: start;
   flex: 1;
+  min-height: 400px;
 
   @media (max-width: 1400px) {
     grid-template-columns: repeat(3, minmax(250px, 1fr));
@@ -476,8 +479,10 @@ const TicketsSection = styled.section`
 `;
 
 const CreateTicketSection = styled.div`
-  padding: 1rem 1.5rem 1.5rem;
-  border-top: 1px solid #dee2e6;
+  flex-shrink: 0;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-top: 1rem;
 `;
 
 const CreateTicketButton = styled.button`
@@ -499,23 +504,37 @@ const CreateTicketButton = styled.button`
 `;
 
 const LoadingMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 3rem;
   color: var(--color-gray);
   font-size: 1.1rem;
+  min-height: 300px;
 `;
 
 const ErrorMessage = styled.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 3rem;
   color: #dc3545;
   font-size: 1rem;
+  min-height: 300px;
 `;
 
 const EmptyMessage = styled.div`
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 3rem;
   color: var(--color-gray);
+  min-height: 300px;
 `;
 
 const EmptyIcon = styled.div`
