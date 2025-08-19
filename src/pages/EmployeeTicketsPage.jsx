@@ -1,26 +1,29 @@
-import { useState, useEffect } from 'react';
-import styled from 'styled-components';
-import { useAppAuth } from '../contexts/AuthContext.jsx';
-import useEmployeeTickets from '../utils/useEmployeeTickets.js';
-import { useEmpleados } from '../utils/useEmpleados.js';
-import EmployeeTicketCard from '../components/EmployeeTicketCard.jsx';
-import EmployeeQuestionnaire from '../components/EmployeeQuestionnaire.jsx';
+import { useState, useEffect } from "react";
+import styled from "styled-components";
+import { useAppAuth } from "../contexts/AuthContext.jsx";
+import useEmployeeTickets from "../utils/useEmployeeTickets.js";
+import { useEmpleados } from "../utils/useEmpleados.js";
+import { useEsquemasPago } from "../utils/useTickets.js";
+import { formatMexicanDate } from "../utils/dateUtils.js";
+import EmployeeTicketCard from "../components/EmployeeTicketCard.jsx";
+import EmployeeQuestionnaire from "../components/EmployeeQuestionnaire.jsx";
 
 const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   const { logout } = useAppAuth();
-  const [activeTab, setActiveTab] = useState('pending'); // 'pending' o 'resolved'
+  const [activeTab, setActiveTab] = useState("pending"); // 'pending' o 'resolved'
   const [showNewTicket, setShowNewTicket] = useState(false);
   const [empleadoCompleto, setEmpleadoCompleto] = useState(null);
   const [loadingEmpleado, setLoadingEmpleado] = useState(true);
-  
+
   const { buscarEmpleadoPorCodigo } = useEmpleados();
-  
+  const { esquemas } = useEsquemasPago();
+
   const {
     pendingTickets,
     resolvedTickets,
     loading: loadingTickets,
     error,
-    refetch
+    refetch,
   } = useEmployeeTickets(empleadoCompleto?.idEmpleado);
 
   // Combinar estados de loading
@@ -30,32 +33,36 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   useEffect(() => {
     const buscarEmpleado = async () => {
       if (!employeeData?.codigoEmpleado) return;
-      
+
       setLoadingEmpleado(true);
       try {
-        const result = await buscarEmpleadoPorCodigo(employeeData.codigoEmpleado);
+        const result = await buscarEmpleadoPorCodigo(
+          employeeData.codigoEmpleado
+        );
         if (result.success && result.empleado) {
           setEmpleadoCompleto(result.empleado);
         } else {
           // Si no se encuentra el empleado en la BD, usar los datos de sesión
-          console.warn('No se encontró el empleado en BD, usando datos de sesión');
+          console.warn(
+            "No se encontró el empleado en BD, usando datos de sesión"
+          );
           setEmpleadoCompleto({
             idEmpleado: employeeData.idEmpleado,
             codigoEmpleado: employeeData.codigoEmpleado,
             nombre: employeeData.empleado,
             idPlanta: employeeData.idPlanta,
-            plantas: { planta: employeeData.planta }
+            plantas: { planta: employeeData.planta },
           });
         }
       } catch (err) {
-        console.error('Error al buscar empleado:', err);
+        console.error("Error al buscar empleado:", err);
         // En caso de error, usar los datos de sesión como fallback
         setEmpleadoCompleto({
           idEmpleado: employeeData.idEmpleado,
           codigoEmpleado: employeeData.codigoEmpleado,
           nombre: employeeData.empleado,
           idPlanta: employeeData.idPlanta,
-          plantas: { planta: employeeData.planta }
+          plantas: { planta: employeeData.planta },
         });
       } finally {
         setLoadingEmpleado(false);
@@ -68,22 +75,20 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   // Función para obtener color de prioridad
   const getPriorityColor = (idPrioridad) => {
     switch (idPrioridad) {
-      case 1: return '#dc3545'; // Alta - Rojo
-      case 2: return '#ffc107'; // Media - Amarillo
-      case 3: return '#28a745'; // Baja - Verde
-      default: return '#6c757d'; // Default - Gris
+      case 1:
+        return "#dc3545"; // Alta - Rojo
+      case 2:
+        return "#ffc107"; // Media - Amarillo
+      case 3:
+        return "#28a745"; // Baja - Verde
+      default:
+        return "#6c757d"; // Default - Gris
     }
   };
 
   // Función para formatear fecha
   const formatDate = (dateString) => {
-    const date = new Date(dateString);
-    const day = date.getDate().toString().padStart(2, '0');
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = date.getHours().toString().padStart(2, '0');
-    const minutes = date.getMinutes().toString().padStart(2, '0');
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    return formatMexicanDate(dateString);
   };
 
   const handleTicketSubmitted = () => {
@@ -112,30 +117,36 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
       <Header>
         <HeaderLeft>
           <WelcomeText>
-            Bienvenido, {empleadoCompleto?.nombre || employeeData?.empleado}
+            {empleadoCompleto?.nombre || employeeData?.empleado}
           </WelcomeText>
           <EmployeeInfo>
-            Código: {empleadoCompleto?.codigoEmpleado || employeeData?.codigoEmpleado} | Planta: {empleadoCompleto?.plantas?.planta || employeeData?.planta}
+            Código:{" "}
+            {empleadoCompleto?.codigoEmpleado || employeeData?.codigoEmpleado} |
+            Planta: {empleadoCompleto?.plantas?.planta || employeeData?.planta}{" "}
+            | Esquema:{" "}
+            {esquemas.find(
+              (e) =>
+                e.idEsquemaPago ===
+                (empleadoCompleto?.idEsquemaPago || employeeData?.idEsquemaPago)
+            )?.esquemaPago || "No configurado"}
           </EmployeeInfo>
         </HeaderLeft>
-        
+
         <HeaderRight>
-          <LogoutButton onClick={handleLogout}>
-            Cerrar Sesión
-          </LogoutButton>
+          <LogoutButton onClick={handleLogout}>Cerrar Sesión</LogoutButton>
         </HeaderRight>
       </Header>
 
       <TabsContainer>
-        <Tab 
-          active={activeTab === 'pending'}
-          onClick={() => setActiveTab('pending')}
+        <Tab
+          active={activeTab === "pending"}
+          onClick={() => setActiveTab("pending")}
         >
           Tickets Pendientes ({pendingTickets.length})
         </Tab>
-        <Tab 
-          active={activeTab === 'resolved'}
-          onClick={() => setActiveTab('resolved')}
+        <Tab
+          active={activeTab === "resolved"}
+          onClick={() => setActiveTab("resolved")}
         >
           Tickets Resueltos ({resolvedTickets.length})
         </Tab>
@@ -149,18 +160,18 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
         ) : (
           <>
             <TicketsSection>
-              {activeTab === 'pending' ? (
+              {activeTab === "pending" ? (
                 <>
                   {pendingTickets.length === 0 ? (
                     <EmptyMessage>
                       <EmptyIcon>📋</EmptyIcon>
                       <EmptyTitle>No tienes tickets pendientes</EmptyTitle>
                       <EmptySubtitle>
-                        ¡Perfecto! Todos tus tickets han sido atendidos.
+                        Aquí aparecerán los tickets que hayas creado y aún no han sido atendidos.
                       </EmptySubtitle>
                     </EmptyMessage>
                   ) : (
-                    pendingTickets.map(ticket => (
+                    pendingTickets.map((ticket) => (
                       <EmployeeTicketCard
                         key={ticket.idTicket}
                         ticket={ticket}
@@ -182,7 +193,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
                       </EmptySubtitle>
                     </EmptyMessage>
                   ) : (
-                    resolvedTickets.map(ticket => (
+                    resolvedTickets.map((ticket) => (
                       <EmployeeTicketCard
                         key={ticket.idTicket}
                         ticket={ticket}
@@ -269,25 +280,25 @@ const LogoutButton = styled.button`
 
 const TabsContainer = styled.div`
   display: flex;
-  background: white;
+  background: #e9ecef;
   border-radius: 12px 12px 0 0;
   overflow: hidden;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 `;
 
 const Tab = styled.button`
   flex: 1;
   padding: 1rem 1.5rem;
   border: none;
-  background: ${props => props.active ? 'var(--color-primary)' : 'white'};
-  color: ${props => props.active ? 'white' : 'var(--color-gray)'};
-  font-weight: ${props => props.active ? '600' : '500'};
+  background: ${(props) => (props.active ? "white" : "#e9ecef")};
+  color: ${(props) => (props.active ? "var(--color-primary)" : "#6c757d")};
+  font-weight: ${(props) => (props.active ? "600" : "500")};
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.9rem;
 
   &:hover {
-    background: ${props => props.active ? 'var(--color-primary)' : '#f8f9fa'};
+    background: ${(props) => (props.active ? "white" : "#d1ecf1")};
+    color: ${(props) => (props.active ? "var(--color-primary)" : "#495057")};
   }
 `;
 

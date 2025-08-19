@@ -20,6 +20,7 @@ export const useAdminTickets = (user) => {
             codigoEmpleado,
             nombre,
             idPlanta,
+            idEsquemaPago,
             plantas (
               idPlanta,
               planta
@@ -38,19 +39,20 @@ export const useAdminTickets = (user) => {
 
       // Si el usuario no es admin (rol 1), filtrar solo sus asignaciones
       if (user?.idRol !== 1) {
+        console.log('Usuario no admin, obteniendo asignaciones para:', user.id);
         const { data: asignaciones } = await supabase
           .from('asignaciones')
           .select('idPlanta, idTipoSolicitud')
           .eq('idUsuario', user.id);
         
+        console.log('Asignaciones encontradas:', asignaciones);
+        
         if (asignaciones && asignaciones.length > 0) {
-          // Construir condiciones OR correctamente para Supabase
-          const conditions = asignaciones.map(a => 
-            `and(empleados.idPlanta.eq.${a.idPlanta},idTipoSolicitud.eq.${a.idTipoSolicitud})`
-          ).join(',');
-          query = query.or(conditions);
+          // No podemos filtrar con OR en JOIN, así que obtenemos todos los datos primero
+          // y luego filtraremos en el cliente
         } else {
           // Si no tiene asignaciones, no puede ver ningún ticket
+          console.log('Usuario sin asignaciones');
           setTickets([]);
           setLoading(false);
           return;
@@ -59,7 +61,21 @@ export const useAdminTickets = (user) => {
 
       // Aplicar filtros
       if (filters.planta) {
-        query = query.eq('empleados.idPlanta', filters.planta);
+        // Para filtros directos de planta, necesitamos hacer un sub-query
+        const { data: empleadosEnPlanta } = await supabase
+          .from('empleados')
+          .select('idEmpleado')
+          .eq('idPlanta', filters.planta);
+        
+        if (empleadosEnPlanta && empleadosEnPlanta.length > 0) {
+          const empleadosIds = empleadosEnPlanta.map(emp => emp.idEmpleado);
+          query = query.in('idEmpleado', empleadosIds);
+        } else {
+          // No hay empleados en esa planta
+          setTickets([]);
+          setLoading(false);
+          return;
+        }
       }
       if (filters.tipoSolicitud) {
         query = query.eq('idTipoSolicitud', filters.tipoSolicitud);
@@ -68,15 +84,67 @@ export const useAdminTickets = (user) => {
         query = query.eq('idPrioridad', filters.prioridad);
       }
       if (filters.empleado) {
-        query = query.or(`empleados.codigoEmpleado.ilike.%${filters.empleado}%,empleados.nombre.ilike.%${filters.empleado}%`);
+        // Para filtros de empleado, también necesitamos sub-query
+        const { data: empleadosFiltrados } = await supabase
+          .from('empleados')
+          .select('idEmpleado')
+          .or(`codigoEmpleado.ilike.%${filters.empleado}%,nombre.ilike.%${filters.empleado}%`);
+        
+        if (empleadosFiltrados && empleadosFiltrados.length > 0) {
+          const empleadosIds = empleadosFiltrados.map(emp => emp.idEmpleado);
+          query = query.in('idEmpleado', empleadosIds);
+        } else {
+          // No hay empleados que coincidan
+          setTickets([]);
+          setLoading(false);
+          return;
+        }
       }
 
       const { data, error } = await query;
 
       if (error) throw error;
 
-      // Aplicar ordenamiento
       let sortedData = data || [];
+
+      // Aplicar filtro de asignaciones después de obtener los datos (solo para no-admin)
+      if (user?.idRol !== 1) {
+        const { data: asignaciones } = await supabase
+          .from('asignaciones')
+          .select('idPlanta, idTipoSolicitud')
+          .eq('idUsuario', user.id);
+        
+        console.log('Filtrando tickets. Total antes del filtro:', sortedData.length);
+        
+        if (asignaciones && asignaciones.length > 0) {
+          // Filtrar tickets basado en las asignaciones
+          sortedData = sortedData.filter(ticket => {
+            const matches = asignaciones.some(asignacion => 
+              ticket.empleados?.idPlanta === asignacion.idPlanta && 
+              ticket.idTipoSolicitud === asignacion.idTipoSolicitud
+            );
+            
+            if (matches) {
+              console.log(`Ticket ${ticket.idTicket} coincide con asignación:`, {
+                ticketPlanta: ticket.empleados?.idPlanta,
+                ticketTipo: ticket.idTipoSolicitud,
+                asignacion: asignaciones.find(a => 
+                  a.idPlanta === ticket.empleados?.idPlanta && 
+                  a.idTipoSolicitud === ticket.idTipoSolicitud
+                )
+              });
+            }
+            
+            return matches;
+          });
+          
+          console.log('Tickets después del filtro de asignaciones:', sortedData.length);
+        } else {
+          sortedData = [];
+        }
+      }
+
+      // Aplicar ordenamiento
       if (filters.sortBy === 'prioridad') {
         sortedData.sort((a, b) => a.idPrioridad - b.idPrioridad);
       } else {
@@ -165,8 +233,7 @@ export const useAtenciones = () => {
         .insert({
           idTicket,
           idUsuario,
-          respuesta,
-          fechaAtencion: new Date().toISOString()
+          respuesta
         })
         .select()
         .single();

@@ -20,7 +20,7 @@ const TicketSuccess = ({ ticket, onCreateAnother, onLogout }) => {
           <DetailItem>
             <DetailLabel>Fecha de creación:</DetailLabel>
             <DetailValue>
-              {new Date(ticket.fechaCreacion).toLocaleDateString('es-ES', {
+              {new Date(ticket.fechaCreacion).toLocaleDateString('es-MX', {
                 year: 'numeric',
                 month: 'long',
                 day: 'numeric',

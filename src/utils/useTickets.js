@@ -139,11 +139,9 @@ export const useTickets = () => {
         .from('tickets')
         .insert([{
           idEmpleado: ticketData.idEmpleado,
-          idEsquemaPago: ticketData.idEsquemaPago,
           idTipoSolicitud: ticketData.idTipoSolicitud,
           descripcion: ticketData.descripcion,
-          idPrioridad: ticketData.idPrioridad,
-          fechaCreacion: new Date().toISOString()
+          idPrioridad: ticketData.idPrioridad
         }])
         .select();
 

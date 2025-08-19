@@ -23,6 +23,7 @@ export const useEmployeeTickets = (idEmpleado) => {
               codigoEmpleado,
               nombre,
               idPlanta,
+              idEsquemaPago,
               plantas (
                 idPlanta,
                 planta
@@ -79,6 +80,7 @@ export const useEmployeeTickets = (idEmpleado) => {
             codigoEmpleado,
             nombre,
             idPlanta,
+            idEsquemaPago,
             plantas (
               idPlanta,
               planta

@@ -18,6 +18,7 @@ export const useEmpleados = () => {
           codigoEmpleado,
           nombre,
           idPlanta,
+          idEsquemaPago,
           plantas (
             idPlanta,
             planta
@@ -45,7 +46,7 @@ export const useEmpleados = () => {
   }, []);
 
   // Crear nuevo empleado
-  const crearEmpleado = useCallback(async (codigoEmpleado, nombre, idPlanta) => {
+  const crearEmpleado = useCallback(async (codigoEmpleado, nombre, idPlanta, idEsquemaPago) => {
     setLoading(true);
     setError(null);
 
@@ -57,6 +58,7 @@ export const useEmpleados = () => {
             codigoEmpleado,
             nombre,
             idPlanta,
+            idEsquemaPago,
           },
         ])
         .select(`
@@ -64,6 +66,7 @@ export const useEmpleados = () => {
           codigoEmpleado,
           nombre,
           idPlanta,
+          idEsquemaPago,
           plantas (
             idPlanta,
             planta
@@ -96,6 +99,7 @@ export const useEmpleados = () => {
           codigoEmpleado,
           nombre,
           idPlanta,
+          idEsquemaPago,
           plantas (
             idPlanta,
             planta
@@ -116,11 +120,47 @@ export const useEmpleados = () => {
     }
   }, []);
 
+  // Actualizar esquema de pago del empleado
+  const actualizarEsquemaPago = useCallback(async (idEmpleado, idEsquemaPago) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("empleados")
+        .update({ idEsquemaPago })
+        .eq("idEmpleado", idEmpleado)
+        .select(`
+          idEmpleado,
+          codigoEmpleado,
+          nombre,
+          idPlanta,
+          idEsquemaPago,
+          plantas (
+            idPlanta,
+            planta
+          )
+        `)
+        .single();
+
+      if (error) throw error;
+
+      return { success: true, empleado: data };
+    } catch (err) {
+      console.error("Error al actualizar esquema de pago:", err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     loading,
     error,
     buscarEmpleadoPorCodigo,
     crearEmpleado,
     obtenerEmpleadoPorId,
+    actualizarEsquemaPago,
   };
 };

@@ -12,6 +12,7 @@ import {
   useTiposSolicitud,
   usePrioridades,
 } from "../utils/useTickets.js";
+import { formatMexicanDate } from "../utils/dateUtils.js";
 import TicketCard from "../components/TicketCard.jsx";
 
 const AdminDashboard = () => {
@@ -32,7 +33,7 @@ const AdminDashboard = () => {
     sortBy: "fecha",
   });
   const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [statsFilter, setStatsFilter] = useState("todos"); // 'todos', 'sinAtender', 'respondidos'
+  const [statsFilter, setStatsFilter] = useState("sinAtender"); // 'todos', 'sinAtender', 'respondidos'
   const [showModal, setShowModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [respuesta, setRespuesta] = useState("");
@@ -143,13 +144,7 @@ const AdminDashboard = () => {
   };
 
   const formatDate = (dateString) => {
-    return new Date(dateString).toLocaleDateString("es-ES", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
+    return formatMexicanDate(dateString);
   };
 
   if (loadingTickets) {
@@ -326,7 +321,13 @@ const AdminDashboard = () => {
 
             <ModalBody>
               <p>
-                <strong>Empleado:</strong> {selectedTicket?.empleado}
+                <strong>Empleado:</strong> {selectedTicket?.empleados?.nombre || 'No disponible'}
+              </p>
+              <p>
+                <strong>Código:</strong> {selectedTicket?.empleados?.codigoEmpleado || 'No disponible'}
+              </p>
+              <p>
+                <strong>Planta:</strong> {selectedTicket?.empleados?.plantas?.planta || 'No disponible'}
               </p>
               <p>
                 <strong>Descripción:</strong>

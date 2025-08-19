@@ -1,19 +1,21 @@
 import { useState } from "react";
 import styled from "styled-components";
 import { useAppAuth } from "../contexts/AuthContext.jsx";
-import { usePlantas } from "../utils/useTickets.js";
+import { usePlantas, useEsquemasPago } from "../utils/useTickets.js";
 import { useEmpleados } from "../utils/useEmpleados.js";
 
 const EmployeeAccess = () => {
   const [employeeCode, setEmployeeCode] = useState("");
   const [fullName, setFullName] = useState("");
   const [selectedPlanta, setSelectedPlanta] = useState("");
+  const [selectedEsquemaPago, setSelectedEsquemaPago] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1); // 1: Código empleado, 2: Datos completos
   
   const { employeeLogin } = useAppAuth();
   const { plantas, loading: loadingPlantas } = usePlantas();
+  const { esquemas, loading: loadingEsquemas } = useEsquemasPago();
   const { buscarEmpleadoPorCodigo, crearEmpleado, loading: loadingEmpleados } = useEmpleados();
 
   const handleCodeSubmit = async (e) => {
@@ -48,7 +50,8 @@ const EmployeeAccess = () => {
           codigoEmpleado: result.empleado.codigoEmpleado,
           empleado: result.empleado.nombre,
           idPlanta: result.empleado.idPlanta,
-          planta: result.empleado.plantas?.planta
+          planta: result.empleado.plantas?.planta,
+          idEsquemaPago: result.empleado.idEsquemaPago || null
         };
         
         const loginResult = employeeLogin(loginData);
@@ -69,7 +72,7 @@ const EmployeeAccess = () => {
     e.preventDefault();
     setError("");
 
-    if (!fullName.trim() || !selectedPlanta) {
+    if (!fullName.trim() || !selectedPlanta || !selectedEsquemaPago) {
       setError("Por favor, complete todos los campos");
       return;
     }
@@ -77,7 +80,12 @@ const EmployeeAccess = () => {
     setLoading(true);
 
     try {
-      const result = await crearEmpleado(employeeCode.trim(), fullName.trim(), selectedPlanta);
+      const result = await crearEmpleado(
+        employeeCode.trim(), 
+        fullName.trim(), 
+        selectedPlanta, 
+        selectedEsquemaPago
+      );
       
       if (!result.success) {
         setError("Error al registrar empleado: " + result.error);
@@ -91,7 +99,8 @@ const EmployeeAccess = () => {
         codigoEmpleado: result.empleado.codigoEmpleado,
         empleado: result.empleado.nombre,
         idPlanta: result.empleado.idPlanta,
-        planta: result.empleado.plantas?.planta
+        planta: result.empleado.plantas?.planta,
+        idEsquemaPago: result.empleado.idEsquemaPago || null
       });
       
       console.log("Empleado registrado y autenticado:", loginResult.employee);
@@ -107,6 +116,7 @@ const EmployeeAccess = () => {
     setStep(1);
     setFullName("");
     setSelectedPlanta("");
+    setSelectedEsquemaPago("");
     setError("");
   };
 
@@ -164,7 +174,7 @@ const EmployeeAccess = () => {
           placeholder="Ej: Juan Pérez García"
           value={fullName}
           onChange={(e) => setFullName(e.target.value)}
-          disabled={loading || loadingEmpleados}
+          disabled={loading || loadingEmpleados || loadingEsquemas}
           required
         />
       </FormGroup>
@@ -177,7 +187,7 @@ const EmployeeAccess = () => {
           <Select
             value={selectedPlanta}
             onChange={(e) => setSelectedPlanta(e.target.value)}
-            disabled={loading || loadingEmpleados}
+            disabled={loading || loadingEmpleados || loadingEsquemas}
             required
           >
             <option value="">Seleccione su planta...</option>
@@ -190,12 +200,33 @@ const EmployeeAccess = () => {
         )}
       </FormGroup>
 
+      <FormGroup>
+        <Label>Esquema de Pago</Label>
+        {loadingEsquemas ? (
+          <LoadingSelect disabled>Cargando esquemas...</LoadingSelect>
+        ) : (
+          <Select
+            value={selectedEsquemaPago}
+            onChange={(e) => setSelectedEsquemaPago(e.target.value)}
+            disabled={loading || loadingEmpleados || loadingEsquemas}
+            required
+          >
+            <option value="">Seleccione su esquema de pago...</option>
+            {esquemas.map((esquema) => (
+              <option key={esquema.idEsquemaPago} value={esquema.idEsquemaPago}>
+                {esquema.esquemaPago}
+              </option>
+            ))}
+          </Select>
+        )}
+      </FormGroup>
+
       <ButtonGroup>
-        <BackButton type="button" onClick={handleBackToCode} disabled={loading || loadingEmpleados}>
+        <BackButton type="button" onClick={handleBackToCode} disabled={loading || loadingEmpleados || loadingEsquemas}>
           Volver
         </BackButton>
-        <SubmitButton type="submit" disabled={loading || loadingEmpleados} style={{flex: 1}}>
-          {loading || loadingEmpleados ? "Registrando..." : "Registrar y Acceder"}
+        <SubmitButton type="submit" disabled={loading || loadingEmpleados || loadingEsquemas} style={{flex: 1}}>
+          {loading || loadingEmpleados || loadingEsquemas ? "Registrando..." : "Registrar y Acceder"}
         </SubmitButton>
       </ButtonGroup>
     </Form>

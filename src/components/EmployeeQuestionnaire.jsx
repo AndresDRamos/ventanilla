@@ -1,7 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
 import {
-  useEsquemasPago,
   useTiposSolicitud,
   usePrioridades,
   useTickets,
@@ -10,11 +9,9 @@ import {
 const EmployeeQuestionnaire = ({
   employeeData,
   onTicketSubmitted,
-  onLogout,
   onBack,
 }) => {
   const [formData, setFormData] = useState({
-    idEsquemaPago: "",
     idTipoSolicitud: "",
     descripcion: "",
     idPrioridad: "",
@@ -23,7 +20,6 @@ const EmployeeQuestionnaire = ({
   const [formErrors, setFormErrors] = useState({});
 
   // Hooks para obtener datos
-  const { esquemas, loading: loadingEsquemas } = useEsquemasPago();
   const { tipos, loading: loadingTipos } = useTiposSolicitud();
   const { prioridades, loading: loadingPrioridades } = usePrioridades();
   const { createTicket, loading: creatingTicket } = useTickets();
@@ -36,11 +32,9 @@ const EmployeeQuestionnaire = ({
     }
   };
 
-  const validateForm = () => {
+  const validateTicketForm = () => {
     const errors = {};
 
-    if (!formData.idEsquemaPago)
-      errors.idEsquemaPago = "Debe seleccionar un esquema de pago";
     if (!formData.idTipoSolicitud)
       errors.idTipoSolicitud = "Debe seleccionar un tipo de solicitud";
     if (!formData.descripcion.trim())
@@ -55,13 +49,12 @@ const EmployeeQuestionnaire = ({
   const handleSubmit = async (e) => {
     e.preventDefault();
 
-    if (!validateForm()) {
+    if (!validateTicketForm()) {
       return;
     }
 
     const ticketData = {
       idEmpleado: employeeData.idEmpleado,
-      idEsquemaPago: parseInt(formData.idEsquemaPago),
       idTipoSolicitud: parseInt(formData.idTipoSolicitud),
       descripcion: formData.descripcion.trim(),
       idPrioridad: parseInt(formData.idPrioridad),
@@ -75,7 +68,7 @@ const EmployeeQuestionnaire = ({
     }
   };
 
-  const isLoading = loadingEsquemas || loadingTipos || loadingPrioridades;
+  const isLoading = loadingTipos || loadingPrioridades;
 
   if (isLoading) {
     return (
@@ -85,6 +78,7 @@ const EmployeeQuestionnaire = ({
     );
   }
 
+  // Formulario de creación de ticket
   return (
     <Container>
       {/* Formulario del cuestionario */}
@@ -100,31 +94,6 @@ const EmployeeQuestionnaire = ({
 
         <Form onSubmit={handleSubmit}>
           <FormGrid>
-            {/* Selección de Esquema de Pago */}
-            <FormGroup>
-              <Label>Esquema de Pago *</Label>
-              <Select
-                value={formData.idEsquemaPago}
-                onChange={(e) =>
-                  handleInputChange("idEsquemaPago", e.target.value)
-                }
-                hasError={formErrors.idEsquemaPago}
-              >
-                <option value="">Seleccione un esquema...</option>
-                {esquemas.map((esquema) => (
-                  <option
-                    key={esquema.idEsquemaPago}
-                    value={esquema.idEsquemaPago}
-                  >
-                    {esquema.esquemaPago}
-                  </option>
-                ))}
-              </Select>
-              {formErrors.idEsquemaPago && (
-                <ErrorText>{formErrors.idEsquemaPago}</ErrorText>
-              )}
-            </FormGroup>
-
             {/* Selección de Tipo de Solicitud */}
             <FormGroup>
               <Label>Tipo de Solicitud *</Label>

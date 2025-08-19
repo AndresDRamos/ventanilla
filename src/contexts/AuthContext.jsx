@@ -68,6 +68,7 @@ export const AuthProvider = ({ children }) => {
       empleado: data.empleado,
       idPlanta: data.idPlanta,
       planta: data.planta,
+      idEsquemaPago: data.idEsquemaPago || null,
       type: 'employee'
     };
 
@@ -114,6 +115,17 @@ export const AuthProvider = ({ children }) => {
     return null;
   }, []);
 
+  // Actualizar datos del empleado
+  const updateEmployeeData = useCallback((updates) => {
+    if (employeeData) {
+      const updatedEmployee = { ...employeeData, ...updates };
+      setEmployeeData(updatedEmployee);
+      localStorage.setItem('employeeData', JSON.stringify(updatedEmployee));
+      return updatedEmployee;
+    }
+    return null;
+  }, [employeeData]);
+
   // Inicializar al cargar el provider
   useEffect(() => {
     getCurrentUser();
@@ -126,7 +138,8 @@ export const AuthProvider = ({ children }) => {
     adminLogin,
     employeeLogin,
     logout,
-    getCurrentUser
+    getCurrentUser,
+    updateEmployeeData
   };
 
   return (
