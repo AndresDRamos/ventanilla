@@ -425,22 +425,25 @@ Option 2: Install and provide the "ws" package:
   justify-content: center;
   min-height: 100vh;
   padding: 20px;
-  background: linear-gradient(135deg, var(--primary-color), var(--secondary-color));
+  background: linear-gradient(
+    135deg,
+    var(--primary-color),
+    var(--secondary-color)
+  );
 `,W1=x.div`
   margin-bottom: 40px;
   text-align: center;
-  
+
   img {
     max-width: 100%;
     height: auto;
     /* Removido el filtro que estaba causando problemas */
   }
 `,q1=x.h1`
-  color: var(--color-white);
-  font-size: 24px;
-  font-weight: 500;
+  color: var(--color-primary);
+  font-size: 28px;
+  font-weight: 600;
   margin: 16px 0 0 0;
-  text-shadow: 0 2px 4px rgba(0,0,0,0.4);
 `,H1=x.div`
   width: 100%;
   max-width: 500px;
