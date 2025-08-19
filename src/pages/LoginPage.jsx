@@ -2,37 +2,20 @@ import { useState } from 'react';
 import styled from 'styled-components';
 import EmployeeAccess from '../components/EmployeeAccess.jsx';
 import AdminAccess from '../components/AdminAccess.jsx';
+import logoImage from '../resources/logo.png';
 
 const LoginPage = () => {
   const [activeTab, setActiveTab] = useState('employee'); // 'employee' por defecto
-  const [logoError, setLogoError] = useState(false);
-  const [currentLogo, setCurrentLogo] = useState('/logo.png');
-
-  const handleLogoError = () => {
-    console.log('Logo no se pudo cargar, probando imagen alternativa');
-    if (currentLogo === '/logo.png') {
-      setCurrentLogo('/EZI-E.png');
-    } else {
-      setLogoError(true);
-    }
-  };
 
   return (
     <Container>
       <Logo>
-        {!logoError ? (
-          <img 
-            key={currentLogo} // Para forzar re-render cuando cambie la imagen
-            src={currentLogo} 
-            alt="Logo de la empresa" 
-            style={{ height: '60px' }}
-            onError={handleLogoError}
-          />
-        ) : (
-          <LogoFallback>
-            <LogoText>Ventanilla de atención EZI</LogoText>
-          </LogoFallback>
-        )}
+        <img 
+          src={logoImage} 
+          alt="Logo de la empresa" 
+          style={{ height: '80px' }}
+        />
+        <LogoTitle>Ventanilla de atención al empleado</LogoTitle>
       </Logo>
 
       <Content>
@@ -90,18 +73,11 @@ const Logo = styled.div`
   }
 `;
 
-const LogoFallback = styled.div`
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  height: 60px;
-`;
-
-const LogoText = styled.h1`
+const LogoTitle = styled.h1`
   color: var(--color-white);
-  font-size: 40px;
-  font-weight: 600;
-  margin: 0;
+  font-size: 24px;
+  font-weight: 500;
+  margin: 16px 0 0 0;
   text-shadow: 0 2px 4px rgba(0,0,0,0.4);
 `;
 

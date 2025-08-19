@@ -1,104 +1,195 @@
 import styled from "styled-components";
+import { formatMexicanDate } from "../utils/dateUtils.js";
 
 const TicketCard = ({
   ticket,
-  onAtender,
-  getResponsable,
+  mode = "employee", // "admin" | "employee"
   formatDate,
   getPriorityColor,
+  getResponsable,
+  onAtender,
+  onVerRespuesta,
+  onShowDetails,
+  isResolved = false,
+  isExpanded = false,
+  onToggleExpand,
 }) => {
-  // Función para formatear fecha corta (dd/mm/aa, hh:mm)
-  const formatShortDate = (dateString) => {
-    const date = new Date(dateString);
-    
-    // Solo formatear sin conversión de zona horaria
-    const mexicanDate = date.toLocaleDateString("es-MX", {
-      day: "2-digit",
-      month: "2-digit", 
-      year: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hour12: false
-    });
-    
-    return mexicanDate.replace(',', ',');
+  // Función para obtener el color de la tarjeta según el estado
+  const getCardBorderColor = () => {
+    if (mode === "employee") {
+      return isResolved ? "#28a745" : "#ffc107";
+    }
+    return ticket.atenciones && ticket.atenciones.length > 0
+      ? "#28a745"
+      : "#ffc107";
   };
 
-  // Función para preparar la descripción (remover saltos de línea)
-  const getTruncatedDescription = (text) => {
-    if (!text) return "";
-    // Reemplazar saltos de línea con espacios para una mejor visualización en una línea
-    return text.replace(/\n/g, " ").trim();
-  };
+  const isTicketResolved =
+    mode === "employee"
+      ? isResolved
+      : ticket.atenciones && ticket.atenciones.length > 0;
 
   return (
-    <Card>
-      <TopBar onClick={(e) => e.stopPropagation()}>
+    <Card 
+      $isResolved={isTicketResolved} 
+      $borderColor={getCardBorderColor()}
+      $isExpanded={isExpanded}
+    >
+      <TopBar 
+        onClick={() => onToggleExpand && onToggleExpand(ticket.idTicket)}
+      >
         <LeftSection>
-          <PriorityBadge priority={getPriorityColor(ticket.idPrioridad)}>
+          <PriorityBadge $priority={getPriorityColor(ticket.idPrioridad)}>
             {ticket.prioridades?.prioridad}
           </PriorityBadge>
           <TicketNumber>#{ticket.idTicket}</TicketNumber>
         </LeftSection>
 
         <RightSection>
-          {ticket.atenciones && ticket.atenciones.length > 0 ? (
-            <AtendedStatus>
-              Atendido el {formatShortDate(ticket.atenciones[0].fechaAtencion)}
-            </AtendedStatus>
+          {mode === "admin" ? (
+            // Modo Admin: Mostrar botón de atender o ver respuesta
+            isTicketResolved ? (
+              <ResponseSection>
+                <ViewResponseButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onVerRespuesta && onVerRespuesta(ticket);
+                  }}
+                >
+                  Ver Respuesta
+                </ViewResponseButton>
+                {/* Flecha de expansión para móvil */}
+                <MobileExpandButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand && onToggleExpand(ticket.idTicket);
+                  }}
+                >
+                  {isExpanded ? "▲" : "▼"}
+                </MobileExpandButton>
+              </ResponseSection>
+            ) : (
+              <ActionSection>
+                <AttendButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onAtender && onAtender(ticket);
+                  }}
+                >
+                  Atender
+                </AttendButton>
+                {/* Flecha de expansión para móvil */}
+                <MobileExpandButton
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onToggleExpand && onToggleExpand(ticket.idTicket);
+                  }}
+                >
+                  {isExpanded ? "▲" : "▼"}
+                </MobileExpandButton>
+              </ActionSection>
+            )
           ) : (
-            <AttendButton
-              onClick={(e) => {
-                e.stopPropagation();
-                onAtender(ticket);
-              }}
-            >
-              Atender
-            </AttendButton>
+            // Modo Employee: Mostrar badge de estado
+            <EmployeeSection>
+              <StatusBadge 
+                $isResolved={isResolved}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShowDetails && onShowDetails(ticket);
+                }}
+              >
+                {isResolved ? "Resuelto" : "Pendiente"}
+              </StatusBadge>
+              {/* Flecha de expansión para móvil */}
+              <MobileExpandButton
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onToggleExpand && onToggleExpand(ticket.idTicket);
+                }}
+              >
+                {isExpanded ? "▲" : "▼"}
+              </MobileExpandButton>
+            </EmployeeSection>
           )}
         </RightSection>
       </TopBar>
 
-      <Content onClick={(e) => e.stopPropagation()}>
-        <InfoRow>
-          <InfoLabel>Empleado:</InfoLabel>
-          <InfoValue>
-            {ticket.empleados?.nombre} (#{ticket.empleados?.codigoEmpleado})
-          </InfoValue>
-        </InfoRow>
+      <Content $isExpanded={isExpanded}>
+        {mode === "admin" ? (
+          // Modo Admin: Layout completo
+          <>
+            <InfoRow>
+              <InfoLabel>Empleado:</InfoLabel>
+              <InfoValue>
+                {ticket.empleados?.nombre} (#{ticket.empleados?.codigoEmpleado})
+              </InfoValue>
+            </InfoRow>
 
-        <InfoRow>
-          <InfoLabel>Tipo:</InfoLabel>
-          <InfoValue>{ticket.tiposSolicitud?.tipoSolicitud}</InfoValue>
-        </InfoRow>
+            <InfoRow>
+              <InfoLabel>Tipo:</InfoLabel>
+              <InfoValue>{ticket.tiposSolicitud?.tipoSolicitud}</InfoValue>
+            </InfoRow>
 
-        <InfoRow>
-          <InfoLabel>Planta:</InfoLabel>
-          <InfoValue>{ticket.empleados?.plantas?.planta}</InfoValue>
-        </InfoRow>
+            <InfoRow>
+              <InfoLabel>Planta:</InfoLabel>
+              <InfoValue>{ticket.empleados?.plantas?.planta}</InfoValue>
+            </InfoRow>
 
-        <InfoRow>
-          <InfoLabel>Fecha:</InfoLabel>
-          <InfoValue>{formatDate(ticket.fechaCreacion)}</InfoValue>
-        </InfoRow>
-        <InfoRow>
-          <InfoLabel>Responsable:</InfoLabel>
-          <InfoValue>
-            {getResponsable(ticket.empleados?.idPlanta, ticket.idTipoSolicitud)}
-          </InfoValue>
-        </InfoRow>
+            <InfoRow>
+              <InfoLabel>Fecha:</InfoLabel>
+              <InfoValue>
+                {formatDate
+                  ? formatDate(ticket.fechaCreacion)
+                  : formatMexicanDate(ticket.fechaCreacion)}
+              </InfoValue>
+            </InfoRow>
 
-        <DescriptionSection>
-          <Description>
-            {getTruncatedDescription(ticket.descripcion)}
-          </Description>
-        </DescriptionSection>
+            {getResponsable && (
+              <InfoRow>
+                <InfoLabel>Responsable:</InfoLabel>
+                <InfoValue>
+                  {getResponsable(
+                    ticket.empleados?.idPlanta,
+                    ticket.idTipoSolicitud
+                  )}
+                </InfoValue>
+              </InfoRow>
+            )}
+          </>
+        ) : (
+          // Modo Employee: Layout simplificado
+          <>
+            <InfoRow>
+              <InfoLabel>Fecha creación:</InfoLabel>
+              <InfoValue>
+                {formatDate
+                  ? formatDate(ticket.fechaCreacion)
+                  : formatMexicanDate(ticket.fechaCreacion)}
+              </InfoValue>
+            </InfoRow>
+
+            <InfoRow>
+              <InfoLabel>Tipo:</InfoLabel>
+              <InfoValue>{ticket.tiposSolicitud?.tipoSolicitud}</InfoValue>
+            </InfoRow>
+
+            <InfoRow>
+              <InfoLabel>Descripción:</InfoLabel>
+              <InfoValue>
+                <TruncatedDescription>
+                  {ticket.descripcion}
+                </TruncatedDescription>
+              </InfoValue>
+            </InfoRow>
+          </>
+        )}
       </Content>
     </Card>
   );
 };
 
-// Styled Components
+// Styled Components - Unificando estilos de ambos componentes
 const Card = styled.div`
   background: white;
   border-radius: 8px;
@@ -107,12 +198,23 @@ const Card = styled.div`
   transition: transform 0.2s ease, box-shadow 0.2s ease;
   display: flex;
   flex-direction: column;
-  height: 100%;
-  min-height: 270px;
-  max-height: 270px;
+  margin-bottom: 1rem;
+  border-left: 4px solid ${(props) => props.$borderColor || "#ffc107"};
+  
+  @media (min-width: 769px) {
+    /* En escritorio, sin restricciones de altura */
+    min-height: auto;
+    max-height: none;
+  }
+
+  @media (max-width: 768px) {
+    /* En móvil, sin restricciones para permitir expansión */
+    min-height: auto;
+    max-height: none;
+  }
 
   &:hover {
-    transform: translateY(-2px);
+    transform: translateY(-1px);
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
   }
 `;
@@ -121,109 +223,227 @@ const TopBar = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 0.6rem 1rem;
+  padding: 0.7rem 1rem;
   background: #f8f9fa;
   border-bottom: 1px solid #dee2e6;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  
+  &:hover {
+    background: #e9ecef;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.8rem 1rem;
+  }
 `;
 
 const LeftSection = styled.div`
   display: flex;
   align-items: center;
-  gap: 0.8rem;
+  gap: 0.75rem;
 `;
 
 const RightSection = styled.div`
   display: flex;
   align-items: center;
+  
+  @media (max-width: 768px) {
+    min-width: 0;
+    flex-shrink: 0;
+  }
+`;
+
+const PriorityBadge = styled.span`
+  background: ${(props) => props.$priority || "#6c757d"};
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+`;
+
+const TicketNumber = styled.span`
+  font-weight: 600;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+`;
+
+const StatusBadge = styled.button`
+  background: ${(props) => (props.$isResolved ? "#28a745" : "#ffc107")};
+  color: ${(props) => (props.$isResolved ? "white" : "#212529")};
+  padding: 0.25rem 0.75rem;
+  border: none;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: all 0.2s ease;
+
+  &:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  }
+`;
+
+const AttendButton = styled.button`
+  background: var(--color-accent);
+  color: white;
+  border: none;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #e54a2e;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.75rem;
+  }
+`;
+
+const ResponseSection = styled.div`
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 0.5rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+    align-items: center;
+  }
+`;
+
+const ViewResponseButton = styled.button`
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.5rem 0.75rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: #0056b3;
+  }
+  
+  @media (max-width: 768px) {
+    padding: 0.4rem 0.6rem;
+    font-size: 0.7rem;
+  }
 `;
 
 const Content = styled.div`
   padding: 1rem;
-  flex: 1;
-  overflow-y: auto;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  
+  @media (min-width: 769px) {
+    /* En escritorio, mostrar siempre */
+    display: block;
+  }
+  
+  @media (max-width: 768px) {
+    /* En móvil, mostrar solo si está expandido */
+    display: ${props => props.$isExpanded ? 'block' : 'none'};
+    padding: ${props => props.$isExpanded ? '1rem' : '0'};
+    max-height: ${props => props.$isExpanded ? 'none' : '0'};
+  }
 `;
 
-const TicketNumber = styled.h3`
-  margin: 0;
+const MobileExpandButton = styled.button`
+  display: none;
+  background: none;
+  border: none;
   color: var(--color-primary);
-  font-size: 1.1rem;
-  font-weight: 600;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem;
+  transition: background-color 0.2s ease;
+
+  &:hover {
+    background: none;
+  }
+
+  @media (max-width: 768px) {
+    display: block;
+  }
 `;
 
-const PriorityBadge = styled.span`
-  background-color: ${(props) => props.priority};
-  color: white;
-  padding: 0.25rem 0.6rem;
-  border-radius: 10px;
-  font-size: 0.75rem;
-  font-weight: 600;
-  text-transform: uppercase;
+const ActionSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+  }
+`;
+
+const EmployeeSection = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  
+  @media (max-width: 768px) {
+    flex-direction: row;
+    justify-content: space-between;
+    width: 100%;
+  }
 `;
 
 const InfoRow = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.25rem;
-  font-size: 0.9rem;
-`;
+  margin-bottom: 0.5rem;
+  gap: 1rem;
 
-const InfoLabel = styled.span`
-  color: var(--color-primary);
-  font-weight: 600;
-  min-width: 80px;
-`;
-
-const InfoValue = styled.span`
-  color: var(--color-gray);
-  text-align: right;
-  flex: 1;
-  margin-left: 1rem;
-`;
-
-const DescriptionSection = styled.div`
-  margin-bottom: 0.25rem;
-`;
-
-const Description = styled.div`
-  margin-top: 0.5rem;
-  padding: 0.8rem;
-  background: #f8f9fa;
-  border-radius: 6px;
-  color: var(--color-gray);
-  line-height: 1.4;
-  border-left: 3px solid var(--color-accent);
-  font-size: 0.9rem;
-
-  /* Limitar a una sola línea */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-`;
-
-const AttendButton = styled.button`
-  background-color: var(--color-bg);
-  color: var(--color-primary);
-  border: none;
-  padding: 0.4rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-weight: 500;
-  font-size: 0.85rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: var(--color-accent);
-    color: white;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.25rem;
   }
 `;
 
-const AtendedStatus = styled.div`
-  color: #28a745;
-  font-weight: 500;
+const InfoLabel = styled.span`
+  font-weight: 600;
+  color: var(--color-primary);
   font-size: 0.85rem;
+  min-width: fit-content;
+`;
+
+const InfoValue = styled.span`
+  color: #495057;
+  font-size: 0.85rem;
+  text-align: right;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    text-align: left;
+  }
+`;
+
+const TruncatedDescription = styled.div`
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
 `;
 
 export default TicketCard;

@@ -63,7 +63,6 @@ const EmployeeQuestionnaire = ({
     const result = await createTicket(ticketData);
 
     if (result.success) {
-      console.log("Ticket creado exitosamente:", result.ticket);
       onTicketSubmitted(result.ticket);
     }
   };

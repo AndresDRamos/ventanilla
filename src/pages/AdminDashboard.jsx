@@ -37,6 +37,9 @@ const AdminDashboard = () => {
   const [showModal, setShowModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [respuesta, setRespuesta] = useState("");
+  const [showResponseModal, setShowResponseModal] = useState(false);
+  const [selectedResponseTicket, setSelectedResponseTicket] = useState(null);
+  const [expandedTicketId, setExpandedTicketId] = useState(null);
 
   // Hooks para datos
   const {
@@ -87,6 +90,15 @@ const AdminDashboard = () => {
     setRespuesta("");
   };
 
+  const handleVerRespuesta = (ticket) => {
+    setSelectedResponseTicket(ticket);
+    setShowResponseModal(true);
+  };
+
+  const handleToggleExpand = (ticketId) => {
+    setExpandedTicketId(expandedTicketId === ticketId ? null : ticketId);
+  };
+
   const handleSubmitAtencion = async () => {
     if (!respuesta.trim()) {
       alert("Debe ingresar una respuesta");
@@ -132,12 +144,12 @@ const AdminDashboard = () => {
 
   const getPriorityColor = (idPrioridad) => {
     switch (idPrioridad) {
-      case 1:
-        return "#dc3545"; // Alta - Rojo
-      case 2:
-        return "#ffc107"; // Media - Amarillo
       case 3:
-        return "#28a745"; // Baja - Verde
+        return "#E06363"; // Alta - Rojo
+      case 2:
+        return "#E0C563"; // Media - Amarillo
+      case 1:
+        return "#636EE0"; // Baja - Verde
       default:
         return "#6c757d"; // Default - Gris
     }
@@ -157,158 +169,171 @@ const AdminDashboard = () => {
 
   return (
     <Container>
-      {/* Header */}
-      <Header>
-        <AdminInfo>
-          <h1>Dashboard Administrativo</h1>
-          <p>Bienvenido, {user?.nombre}</p>
-        </AdminInfo>
-        <LogoutButton onClick={logout}>Cerrar Sesión</LogoutButton>
-      </Header>
+      {/* Área fija - Header, Stats y Filtros */}
+      <FixedContent>
+        {/* Header */}
+        <Header>
+          <AdminInfo>
+            <h1>Dashboard Administrativo</h1>
+            <p>Bienvenido, {user?.nombre}</p>
+          </AdminInfo>
+          <LogoutButton onClick={logout}>Cerrar Sesión</LogoutButton>
+        </Header>
 
-      {/* Estadísticas */}
-      <StatsSection>
-        <StatCard
-          active={statsFilter === "sinAtender"}
-          onClick={() => handleStatsFilter("sinAtender")}
-        >
-          <StatNumber>{stats.sinAtender}</StatNumber>
-          <StatLabel>Sin Atender</StatLabel>
-        </StatCard>
-        <StatCard
-          active={statsFilter === "respondidos"}
-          onClick={() => handleStatsFilter("respondidos")}
-        >
-          <StatNumber>{stats.respondidos}</StatNumber>
-          <StatLabel>Atendidos</StatLabel>
-        </StatCard>
-        <StatCard
-          active={statsFilter === "todos"}
-          onClick={() => handleStatsFilter("todos")}
-        >
-          <StatNumber>{stats.total}</StatNumber>
-          <StatLabel>Totales</StatLabel>
-        </StatCard>
-      </StatsSection>
+        {/* Estadísticas */}
+        <StatsSection>
+          <StatCard
+            $active={statsFilter === "sinAtender"}
+            onClick={() => handleStatsFilter("sinAtender")}
+          >
+            <StatNumber>{stats.sinAtender}</StatNumber>
+            <StatLabel>Sin Atender</StatLabel>
+          </StatCard>
+          <StatCard
+            $active={statsFilter === "respondidos"}
+            onClick={() => handleStatsFilter("respondidos")}
+          >
+            <StatNumber>{stats.respondidos}</StatNumber>
+            <StatLabel>Atendidos</StatLabel>
+          </StatCard>
+          <StatCard
+            $active={statsFilter === "todos"}
+            onClick={() => handleStatsFilter("todos")}
+          >
+            <StatNumber>{stats.total}</StatNumber>
+            <StatLabel>Totales</StatLabel>
+          </StatCard>
+        </StatsSection>
 
-      {/* Filtros */}
-      <FiltersSection>
-        <FiltersHeader onClick={() => setFiltersExpanded(!filtersExpanded)}>
-          <h3>Filtros</h3>
-          <ExpandIcon expanded={filtersExpanded}>
-            {filtersExpanded ? "▲" : "▼"}
-          </ExpandIcon>
-        </FiltersHeader>
-        
-        {filtersExpanded && (
-          <FiltersContent>
-            <FiltersRow>
-              <FilterGroup>
-                <label>Planta:</label>
-                <select
-                  value={tempFilters.planta}
-                  onChange={(e) => handleTempFilterChange("planta", e.target.value)}
-                >
-                  <option value="">Todas</option>
-                  {plantas.map((planta) => (
-                    <option key={planta.idPlanta} value={planta.idPlanta}>
-                      {planta.planta}
-                    </option>
-                  ))}
-                </select>
-              </FilterGroup>
+        {/* Filtros */}
+        <FiltersSection>
+          <FiltersHeader onClick={() => setFiltersExpanded(!filtersExpanded)}>
+            <h3>Filtros</h3>
+            <ExpandIcon $expanded={filtersExpanded}>
+              {filtersExpanded ? "▲" : "▼"}
+            </ExpandIcon>
+          </FiltersHeader>
 
-              <FilterGroup>
-                <label>Tipo:</label>
-                <select
-                  value={tempFilters.tipoSolicitud}
-                  onChange={(e) =>
-                    handleTempFilterChange("tipoSolicitud", e.target.value)
-                  }
-                >
-                  <option value="">Todos</option>
-                  {tipos
-                    .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
-                    .map((tipo) => (
-                      <option
-                        key={tipo.idTipoSolicitud}
-                        value={tipo.idTipoSolicitud}
-                      >
-                        {tipo.tipoSolicitud}
+          {filtersExpanded && (
+            <FiltersContent>
+              <FiltersRow>
+                <FilterGroup>
+                  <label>Planta:</label>
+                  <select
+                    value={tempFilters.planta}
+                    onChange={(e) =>
+                      handleTempFilterChange("planta", e.target.value)
+                    }
+                  >
+                    <option value="">Todas</option>
+                    {plantas.map((planta) => (
+                      <option key={planta.idPlanta} value={planta.idPlanta}>
+                        {planta.planta}
                       </option>
                     ))}
-                </select>
-              </FilterGroup>
+                  </select>
+                </FilterGroup>
 
-              <FilterGroup>
-                <label>Prioridad:</label>
+                <FilterGroup>
+                  <label>Tipo:</label>
+                  <select
+                    value={tempFilters.tipoSolicitud}
+                    onChange={(e) =>
+                      handleTempFilterChange("tipoSolicitud", e.target.value)
+                    }
+                  >
+                    <option value="">Todos</option>
+                    {tipos
+                      .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
+                      .map((tipo) => (
+                        <option
+                          key={tipo.idTipoSolicitud}
+                          value={tipo.idTipoSolicitud}
+                        >
+                          {tipo.tipoSolicitud}
+                        </option>
+                      ))}
+                  </select>
+                </FilterGroup>
+
+                <FilterGroup>
+                  <label>Prioridad:</label>
+                  <select
+                    value={tempFilters.prioridad}
+                    onChange={(e) =>
+                      handleTempFilterChange("prioridad", e.target.value)
+                    }
+                  >
+                    <option value="">Todas</option>
+                    {prioridades.map((prioridad) => (
+                      <option
+                        key={prioridad.idPrioridad}
+                        value={prioridad.idPrioridad}
+                      >
+                        {prioridad.prioridad}
+                      </option>
+                    ))}
+                  </select>
+                </FilterGroup>
+
+                <FilterGroup>
+                  <label>Empleado:</label>
+                  <input
+                    type="text"
+                    placeholder="Código o nombre..."
+                    value={tempFilters.empleado}
+                    onChange={(e) =>
+                      handleTempFilterChange("empleado", e.target.value)
+                    }
+                  />
+                </FilterGroup>
+              </FiltersRow>
+
+              <SortSection>
+                <label>Ordenar por:</label>
                 <select
-                  value={tempFilters.prioridad}
-                  onChange={(e) => handleTempFilterChange("prioridad", e.target.value)}
+                  value={tempFilters.sortBy}
+                  onChange={(e) =>
+                    handleTempFilterChange("sortBy", e.target.value)
+                  }
                 >
-                  <option value="">Todas</option>
-                  {prioridades.map((prioridad) => (
-                    <option
-                      key={prioridad.idPrioridad}
-                      value={prioridad.idPrioridad}
-                    >
-                      {prioridad.prioridad}
-                    </option>
-                  ))}
+                  <option value="fecha">Fecha de creación</option>
+                  <option value="prioridad">Prioridad</option>
                 </select>
-              </FilterGroup>
+              </SortSection>
 
-              <FilterGroup>
-                <label>Empleado:</label>
-                <input
-                  type="text"
-                  placeholder="Código o nombre..."
-                  value={tempFilters.empleado}
-                  onChange={(e) => handleTempFilterChange("empleado", e.target.value)}
-                />
-              </FilterGroup>
-            </FiltersRow>
+              <FilterButtons>
+                <ClearButton onClick={handleClearFilters}>Limpiar</ClearButton>
+                <ApplyButton onClick={handleApplyFilters}>Aplicar</ApplyButton>
+              </FilterButtons>
+            </FiltersContent>
+          )}
+        </FiltersSection>
+      </FixedContent>
 
-            <SortSection>
-              <label>Ordenar por:</label>
-              <select
-                value={tempFilters.sortBy}
-                onChange={(e) => handleTempFilterChange("sortBy", e.target.value)}
-              >
-                <option value="fecha">Fecha de creación</option>
-                <option value="prioridad">Prioridad</option>
-              </select>
-            </SortSection>
-
-            <FilterButtons>
-              <ClearButton onClick={handleClearFilters}>
-                Limpiar
-              </ClearButton>
-              <ApplyButton onClick={handleApplyFilters}>
-                Aplicar
-              </ApplyButton>
-            </FilterButtons>
-          </FiltersContent>
-        )}
-      </FiltersSection>
-
-      {/* Lista de Tickets */}
-      <TicketsSection>
-        {filteredTickets.length === 0 ? (
-          <EmptyMessage>No se encontraron tickets</EmptyMessage>
-        ) : (
-          filteredTickets.map((ticket) => (
-            <TicketCard
-              key={ticket.idTicket}
-              ticket={ticket}
-              onAtender={handleAtender}
-              getResponsable={getResponsable}
-              formatDate={formatDate}
-              getPriorityColor={getPriorityColor}
-            />
-          ))
-        )}
-      </TicketsSection>
+      {/* Área de Tickets con Scroll Independiente */}
+      <ScrollableTicketsArea>
+        <TicketsSection>
+          {filteredTickets.length === 0 ? (
+            <EmptyMessage>No se encontraron tickets</EmptyMessage>
+          ) : (
+            filteredTickets.map((ticket) => (
+              <TicketCard
+                key={ticket.idTicket}
+                ticket={ticket}
+                mode="admin"
+                onAtender={handleAtender}
+                onVerRespuesta={handleVerRespuesta}
+                getResponsable={getResponsable}
+                formatDate={formatDate}
+                getPriorityColor={getPriorityColor}
+                isExpanded={expandedTicketId === ticket.idTicket}
+                onToggleExpand={handleToggleExpand}
+              />
+            ))
+          )}
+        </TicketsSection>
+      </ScrollableTicketsArea>
 
       {/* Modal de Atención */}
       {showModal && (
@@ -320,19 +345,37 @@ const AdminDashboard = () => {
             </ModalHeader>
 
             <ModalBody>
-              <p>
-                <strong>Empleado:</strong> {selectedTicket?.empleados?.nombre || 'No disponible'}
-              </p>
-              <p>
-                <strong>Código:</strong> {selectedTicket?.empleados?.codigoEmpleado || 'No disponible'}
-              </p>
-              <p>
-                <strong>Planta:</strong> {selectedTicket?.empleados?.plantas?.planta || 'No disponible'}
-              </p>
-              <p>
-                <strong>Descripción:</strong>
-              </p>
-              <p>{selectedTicket?.descripcion}</p>
+              <InfoRow>
+                <InfoLabel>Empleado:</InfoLabel>
+                <InfoValue>
+                  {selectedTicket?.empleados?.nombre} (#
+                  {selectedTicket?.empleados?.codigoEmpleado})
+                </InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Planta:</InfoLabel>
+                <InfoValue>
+                  {selectedTicket?.empleados?.plantas?.planta}
+                </InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Tipo:</InfoLabel>
+                <InfoValue>
+                  {selectedTicket?.tiposSolicitud?.tipoSolicitud}
+                </InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Prioridad:</InfoLabel>
+                <InfoValue>{selectedTicket?.prioridades?.prioridad}</InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Descripción:</InfoLabel>
+                <InfoValue>{selectedTicket?.descripcion}</InfoValue>
+              </InfoRow>
 
               <label>Respuesta:</label>
               <ResponseTextArea
@@ -358,7 +401,84 @@ const AdminDashboard = () => {
         </Modal>
       )}
 
-      {/* Modal de Detalles - removido ya que no es necesario */}
+      {/* Modal de Ver Respuesta */}
+      {showResponseModal && (
+        <Modal>
+          <ModalContent>
+            <ModalHeader>
+              <h3>Respuesta - Ticket #{selectedResponseTicket?.idTicket}</h3>
+              <CloseButton onClick={() => setShowResponseModal(false)}>
+                ×
+              </CloseButton>
+            </ModalHeader>
+
+            <ModalBody>
+              <InfoRow>
+                <InfoLabel>Empleado:</InfoLabel>
+                <InfoValue>
+                  {selectedResponseTicket?.empleados?.nombre} (#
+                  {selectedResponseTicket?.empleados?.codigoEmpleado})
+                </InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Planta:</InfoLabel>
+                <InfoValue>
+                  {selectedResponseTicket?.empleados?.plantas?.planta}
+                </InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Tipo:</InfoLabel>
+                <InfoValue>
+                  {selectedResponseTicket?.tiposSolicitud?.tipoSolicitud}
+                </InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Prioridad:</InfoLabel>
+                <InfoValue>
+                  {selectedResponseTicket?.prioridades?.prioridad}
+                </InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Descripción:</InfoLabel>
+                <InfoValue>{selectedResponseTicket?.descripcion}</InfoValue>
+              </InfoRow>
+
+              <InfoRow>
+                <InfoLabel>Respuesta proporcionada:</InfoLabel>
+                <InfoValue style={{ textAlign: "left" }}>
+                  <ResponseDisplay>
+                    {selectedResponseTicket?.atenciones?.[0]?.respuesta ||
+                      "No hay respuesta disponible"}
+                  </ResponseDisplay>
+                </InfoValue>
+              </InfoRow>
+
+              <ResponseInfo>
+                <strong>Atendido por:</strong>{" "}
+                {selectedResponseTicket?.atenciones?.[0]?.usuarios?.nombre ||
+                  "No disponible"}{" "}
+                <br />
+                <strong>Fecha de atención:</strong>{" "}
+                {selectedResponseTicket?.atenciones?.[0]?.fechaAtencion
+                  ? formatDate(
+                      selectedResponseTicket.atenciones[0].fechaAtencion
+                    )
+                  : "No disponible"}
+              </ResponseInfo>
+            </ModalBody>
+
+            <ModalFooter>
+              <CancelButton onClick={() => setShowResponseModal(false)}>
+                Cerrar
+              </CancelButton>
+            </ModalFooter>
+          </ModalContent>
+        </Modal>
+      )}
     </Container>
   );
 };
@@ -372,10 +492,42 @@ const Container = styled.div`
   margin: 0 auto;
   padding: 1rem;
   background-color: #f8f9fa;
-  
+
   @media (max-width: 768px) {
     padding: 0.5rem;
     height: 100vh;
+  }
+`;
+
+const FixedContent = styled.div`
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+`;
+
+const ScrollableTicketsArea = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  margin-top: 0.5rem;
+
+  /* Estilo del scrollbar */
+  &::-webkit-scrollbar {
+    width: 8px;
+  }
+
+  &::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+  }
+
+  &::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+
+    &:hover {
+      background: #a8a8a8;
+    }
   }
 `;
 
@@ -398,7 +550,7 @@ const Header = styled.header`
   border-radius: 8px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   flex-shrink: 0;
-  
+
   @media (max-width: 768px) {
     padding: 0.8rem;
     flex-wrap: wrap;
@@ -411,7 +563,7 @@ const AdminInfo = styled.div`
     margin: 0;
     color: var(--color-primary);
     font-size: 1.5rem;
-    
+
     @media (max-width: 768px) {
       font-size: 1.2rem;
     }
@@ -421,7 +573,7 @@ const AdminInfo = styled.div`
     margin: 0.3rem 0 0 0;
     color: var(--color-gray);
     font-size: 0.9rem;
-    
+
     @media (max-width: 768px) {
       font-size: 0.8rem;
     }
@@ -469,7 +621,7 @@ const StatCard = styled.div`
   cursor: pointer;
   position: relative;
   border: 2px solid
-    ${(props) => (props.active ? "var(--color-primary)" : "transparent")};
+    ${(props) => (props.$active ? "var(--color-primary)" : "transparent")};
 
   @media (max-width: 768px) {
     padding: 0.5rem;
@@ -486,7 +638,7 @@ const StatCard = styled.div`
     bottom: 0;
     left: 50%;
     transform: translateX(-50%);
-    width: ${(props) => (props.active ? "80%" : "0")};
+    width: ${(props) => (props.$active ? "80%" : "0")};
     height: 3px;
     background: var(--color-primary);
     transition: width 0.3s ease;
@@ -498,7 +650,7 @@ const StatNumber = styled.div`
   font-weight: bold;
   color: var(--color-primary);
   margin-bottom: 0.2rem;
-  
+
   @media (max-width: 768px) {
     font-size: 1.2rem;
     margin-bottom: 0.1rem;
@@ -509,7 +661,7 @@ const StatLabel = styled.div`
   color: var(--color-gray);
   font-weight: 500;
   font-size: 0.9rem;
-  
+
   @media (max-width: 768px) {
     font-size: 0.75rem;
   }
@@ -521,7 +673,7 @@ const FiltersSection = styled.div`
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
   margin-bottom: 1rem;
   flex-shrink: 0;
-  
+
   @media (max-width: 768px) {
     padding: 0;
   }
@@ -533,18 +685,18 @@ const FiltersHeader = styled.div`
   justify-content: space-between;
   align-items: center;
   cursor: pointer;
-  border-bottom: ${props => props.expanded ? '1px solid #eee' : 'none'};
-  
+  border-bottom: ${(props) => (props.$expanded ? "1px solid #eee" : "none")};
+
   h3 {
     margin: 0;
     color: var(--color-primary);
     font-size: 1.1rem;
   }
-  
+
   &:hover {
     background-color: #f8f9fa;
   }
-  
+
   @media (max-width: 768px) {
     padding: 0.8rem;
   }
@@ -559,7 +711,7 @@ const ExpandIcon = styled.span`
 const FiltersContent = styled.div`
   padding: 1rem;
   padding-top: 0.5rem;
-  
+
   @media (max-width: 768px) {
     padding: 0.8rem;
     padding-top: 0.5rem;
@@ -639,7 +791,7 @@ const FilterButtons = styled.div`
   margin-top: 1rem;
   padding-top: 0.8rem;
   border-top: 1px solid #eee;
-  
+
   @media (max-width: 480px) {
     flex-direction: column;
     gap: 0.6rem;
@@ -682,14 +834,13 @@ const ClearButton = styled.button`
 `;
 
 const TicketsSection = styled.div`
-  flex: 1;
-  overflow-y: auto;
   display: grid;
   grid-template-columns: repeat(3, minmax(300px, 1fr));
-  gap: 1rem;
-  padding-right: 0.5rem;
-  grid-auto-rows: 1fr;
+  grid-column-gap: 1rem;
+  grid-row-gap: 1rem;
+  padding: 1rem;
   align-content: start;
+  min-height: 100%;
 
   @media (max-width: 1200px) {
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
@@ -697,28 +848,9 @@ const TicketsSection = styled.div`
 
   @media (max-width: 768px) {
     grid-template-columns: 1fr;
-    gap: 0.8rem;
+    grid-column-gap: 0.8rem;
+    grid-row-gap: 0.8rem;
     padding: 0.5rem;
-    padding-right: 0.5rem;
-  }
-
-  /* Estilo del scrollbar */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-
-    &:hover {
-      background: #a8a8a8;
-    }
   }
 `;
 
@@ -750,7 +882,7 @@ const ModalContent = styled.div`
   border-radius: 8px;
   width: 90%;
   max-width: 600px;
-  max-height: 80vh;
+  max-height: 100vh;
   overflow-y: auto;
 `;
 
@@ -848,5 +980,55 @@ const SubmitButton = styled.button`
   }
 `;
 
-export default AdminDashboard;
+const ResponseDisplay = styled.div`
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  border: 1px solid #dee2e6;
+  margin-bottom: 1rem;
+  color: #495057;
+  line-height: 1.5;
+  white-space: pre-wrap;
+`;
 
+const ResponseInfo = styled.div`
+  padding: 1rem;
+  background: #e9f7ef;
+  border-radius: 4px;
+  border-left: 4px solid #28a745;
+  color: #155724;
+  font-size: 0.9rem;
+`;
+
+const InfoRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 0.75rem;
+  gap: 1rem;
+
+  @media (max-width: 768px) {
+    flex-direction: column;
+    gap: 0.25rem;
+  }
+`;
+
+const InfoLabel = styled.span`
+  font-weight: 600;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  min-width: fit-content;
+`;
+
+const InfoValue = styled.span`
+  color: #495057;
+  font-size: 0.9rem;
+  text-align: right;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    text-align: left;
+  }
+`;
+
+export default AdminDashboard;

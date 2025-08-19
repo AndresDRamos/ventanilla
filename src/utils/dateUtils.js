@@ -2,8 +2,6 @@
 
 // Función para formatear fecha para mostrar al usuario
 export const formatMexicanDate = (dateString) => {
-  console.log('formatMexicanDate - Raw dateString:', dateString);
-  
   // Parsear manualmente para evitar conversión automática de zona horaria
   if (dateString.includes('T') && dateString.includes('+00:00')) {
     // Es una fecha UTC de Supabase, extraer directamente los valores
@@ -13,16 +11,12 @@ export const formatMexicanDate = (dateString) => {
     const [year, month, day] = datePart.split('-');
     const [hours, minutes] = timePart.split(':');
     
-    const result = `${day}/${month}/${year}, ${hours}:${minutes}`;
-    console.log('formatMexicanDate - Formatted (manual):', result);
-    return result;
+    return `${day}/${month}/${year}, ${hours}:${minutes}`;
   }
   
   // Fallback para otros formatos
   const date = new Date(dateString);
-  console.log('formatMexicanDate - Date object:', date);
-  
-  const result = date.toLocaleDateString("es-MX", {
+  return date.toLocaleDateString("es-MX", {
     day: "2-digit",
     month: "2-digit", 
     year: "numeric",
@@ -30,9 +24,6 @@ export const formatMexicanDate = (dateString) => {
     minute: "2-digit",
     hour12: false
   });
-  
-  console.log('formatMexicanDate - Formatted:', result);
-  return result;
 };
 
 // Función para obtener solo la hora en formato local
