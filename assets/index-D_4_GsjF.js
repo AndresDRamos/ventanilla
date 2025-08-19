@@ -1408,9 +1408,8 @@ Option 2: Install and provide the "ws" package:
     text-align: center;
     width: 100%;
   }
-`,G_=({employeeData:e,onLogout:t})=>{var Ut,Te,qe,P,A;const{logout:r}=Fi(),[n,i]=C.useState("pending"),[o,s]=C.useState(!1),[a,l]=C.useState(null),[u,c]=C.useState(!0),[f,p]=C.useState(null),[v,y]=C.useState(!1),[w,b]=C.useState(null),{buscarEmpleadoPorCodigo:g}=Og(),{esquemas:h}=Pg(),{pendingTickets:m,resolvedTickets:_,loading:S,error:E,refetch:k}=L_(a==null?void 0:a.idEmpleado),T=u||S;C.useEffect(()=>{(async()=>{if(e!=null&&e.codigoEmpleado){c(!0);try{const M=await g(e.codigoEmpleado);M.success&&M.empleado?l(M.empleado):(console.warn("No se encontró el empleado en BD, usando datos de sesión"),l({idEmpleado:e.idEmpleado,codigoEmpleado:e.codigoEmpleado,nombre:e.empleado,idPlanta:e.idPlanta,plantas:{planta:e.planta}}))}catch(M){console.error("Error al buscar empleado:",M),l({idEmpleado:e.idEmpleado,codigoEmpleado:e.codigoEmpleado,nombre:e.empleado,idPlanta:e.idPlanta,plantas:{planta:e.planta}})}finally{c(!1)}}})()},[e,g]);const R=O=>{switch(O){case 1:return"#dc3545";case 2:return"#ffc107";case 3:return"#28a745";default:return"#6c757d"}},N=O=>as(O),z=O=>{p(f===O?null:O)},he=O=>{b(O),y(!0)},Le=()=>{s(!1),k()},bt=()=>{r(),t&&t()};return o?d.jsx(z_,{employeeData:a||e,onTicketSubmitted:Le,onLogout:bt,onBack:()=>s(!1)}):d.jsxs(Q_,{children:[d.jsxs(J_,{children:[d.jsxs(X_,{children:[d.jsxs(Z_,{children:[d.jsx(tx,{children:(a==null?void 0:a.nombre)||(e==null?void 0:e.empleado)}),d.jsxs(rx,{children:["Código:"," ",(a==null?void 0:a.codigoEmpleado)||(e==null?void 0:e.codigoEmpleado)," ","| Planta:"," ",((Ut=a==null?void 0:a.plantas)==null?void 0:Ut.planta)||(e==null?void 0:e.planta)," | Esquema:"," ",((Te=h.find(O=>O.idEsquemaPago===((a==null?void 0:a.idEsquemaPago)||(e==null?void 0:e.idEsquemaPago))))==null?void 0:Te.esquemaPago)||"No configurado"]})]}),d.jsx(ex,{children:d.jsx(nx,{onClick:bt,children:"Cerrar Sesión"})})]}),d.jsxs(ix,{children:[d.jsxs(pf,{active:n==="pending",onClick:()=>{i("pending"),p(null)},children:["Tickets Pendientes (",m.length,")"]}),d.jsxs(pf,{active:n==="resolved",onClick:()=>{i("resolved"),p(null)},children:["Tickets Resueltos (",_.length,")"]})]})]}),d.jsx(Y_,{children:T?d.jsx(ux,{children:"Cargando tickets..."}):E?d.jsxs(cx,{children:["Error al cargar tickets: ",E]}):d.jsxs(ox,{children:[d.jsx(sx,{children:n==="pending"?d.jsx(d.Fragment,{children:m.length===0?d.jsxs(gf,{children:[d.jsx(mf,{children:"📋"}),d.jsx(vf,{children:"No tienes tickets pendientes"}),d.jsx(yf,{children:"Aquí aparecerán los tickets que hayas creado y aún no han sido atendidos."})]}):m.map(O=>d.jsx(Ul,{ticket:O,mode:"employee",formatDate:N,getPriorityColor:R,isResolved:!1,isExpanded:f===O.idTicket,onToggleExpand:z,onShowDetails:he},O.idTicket))}):d.jsx(d.Fragment,{children:_.length===0?d.jsxs(gf,{children:[d.jsx(mf,{children:"✅"}),d.jsx(vf,{children:"No tienes tickets resueltos"}),d.jsx(yf,{children:"Aquí aparecerán los tickets que hayan sido atendidos."})]}):_.map(O=>d.jsx(Ul,{ticket:O,mode:"employee",formatDate:N,getPriorityColor:R,isResolved:!0,isExpanded:f===O.idTicket,onToggleExpand:z,onShowDetails:he},O.idTicket))})}),d.jsx(ax,{children:d.jsx(lx,{onClick:()=>s(!0),children:"+ Crear Nuevo Ticket"})})]})}),v&&d.jsx(dx,{children:d.jsxs(fx,{children:[d.jsxs(hx,{children:[d.jsxs("h3",{children:["Detalles - Ticket #",w==null?void 0:w.idTicket]}),d.jsx(px,{onClick:()=>y(!1),children:"×"})]}),d.jsxs(gx,{children:[d.jsxs(Wn,{children:[d.jsx(qn,{children:"Fecha creación:"}),d.jsx(Hn,{children:N(w==null?void 0:w.fechaCreacion)})]}),d.jsxs(Wn,{children:[d.jsx(qn,{children:"Tipo:"}),d.jsx(Hn,{children:(qe=w==null?void 0:w.tiposSolicitud)==null?void 0:qe.tipoSolicitud})]}),d.jsxs(Wn,{children:[d.jsx(qn,{children:"Prioridad:"}),d.jsx(Hn,{children:(P=w==null?void 0:w.prioridades)==null?void 0:P.prioridad})]}),d.jsxs(Wn,{children:[d.jsx(qn,{children:"Descripción:"}),d.jsx(Hn,{children:w==null?void 0:w.descripcion})]}),(w==null?void 0:w.atenciones)&&w.atenciones.length>0&&d.jsxs(d.Fragment,{children:[d.jsxs(Wn,{children:[d.jsx(qn,{children:"Respuesta:"}),d.jsx(Hn,{style:{textAlign:"left"},children:d.jsx(yx,{children:w.atenciones[0].respuesta||"No hay respuesta disponible"})})]}),d.jsxs(wx,{children:[d.jsx("strong",{children:"Atendido por:"})," ",((A=w.atenciones[0].usuarios)==null?void 0:A.nombre)||"No disponible"," ",d.jsx("br",{}),d.jsx("strong",{children:"Fecha de atención:"})," ",w.atenciones[0].fechaAtencion?N(w.atenciones[0].fechaAtencion):"No disponible"]})]})]}),d.jsx(mx,{children:d.jsx(vx,{onClick:()=>y(!1),children:"Cerrar"})})]})})]})},Q_=x.div`
+`,G_=({employeeData:e,onLogout:t})=>{var Ut,Te,qe,P,A;const{logout:r}=Fi(),[n,i]=C.useState("pending"),[o,s]=C.useState(!1),[a,l]=C.useState(null),[u,c]=C.useState(!0),[f,p]=C.useState(null),[v,y]=C.useState(!1),[w,b]=C.useState(null),{buscarEmpleadoPorCodigo:g}=Og(),{esquemas:h}=Pg(),{pendingTickets:m,resolvedTickets:_,loading:S,error:E,refetch:k}=L_(a==null?void 0:a.idEmpleado),T=u||S;C.useEffect(()=>{(async()=>{if(e!=null&&e.codigoEmpleado){c(!0);try{const M=await g(e.codigoEmpleado);M.success&&M.empleado?l(M.empleado):(console.warn("No se encontró el empleado en BD, usando datos de sesión"),l({idEmpleado:e.idEmpleado,codigoEmpleado:e.codigoEmpleado,nombre:e.empleado,idPlanta:e.idPlanta,plantas:{planta:e.planta}}))}catch(M){console.error("Error al buscar empleado:",M),l({idEmpleado:e.idEmpleado,codigoEmpleado:e.codigoEmpleado,nombre:e.empleado,idPlanta:e.idPlanta,plantas:{planta:e.planta}})}finally{c(!1)}}})()},[e,g]);const R=O=>{switch(O){case 1:return"#dc3545";case 2:return"#ffc107";case 3:return"#28a745";default:return"#6c757d"}},N=O=>as(O),z=O=>{p(f===O?null:O)},he=O=>{b(O),y(!0)},Le=()=>{s(!1),k()},bt=()=>{r(),t&&t()};return o?d.jsx(z_,{employeeData:a||e,onTicketSubmitted:Le,onLogout:bt,onBack:()=>s(!1)}):d.jsxs(Q_,{children:[d.jsxs(J_,{children:[d.jsxs(X_,{children:[d.jsxs(Z_,{children:[d.jsx(tx,{children:(a==null?void 0:a.nombre)||(e==null?void 0:e.empleado)}),d.jsxs(rx,{children:["Código:"," ",(a==null?void 0:a.codigoEmpleado)||(e==null?void 0:e.codigoEmpleado)," ","| Planta:"," ",((Ut=a==null?void 0:a.plantas)==null?void 0:Ut.planta)||(e==null?void 0:e.planta)," | Esquema:"," ",((Te=h.find(O=>O.idEsquemaPago===((a==null?void 0:a.idEsquemaPago)||(e==null?void 0:e.idEsquemaPago))))==null?void 0:Te.esquemaPago)||"No configurado"]})]}),d.jsx(ex,{children:d.jsx(nx,{onClick:bt,children:"Cerrar Sesión"})})]}),d.jsxs(ix,{children:[d.jsxs(pf,{active:n==="pending",onClick:()=>{i("pending"),p(null)},children:["Tickets Pendientes (",m.length,")"]}),d.jsxs(pf,{active:n==="resolved",onClick:()=>{i("resolved"),p(null)},children:["Tickets Resueltos (",_.length,")"]})]})]}),d.jsx(Y_,{children:d.jsx(ox,{children:d.jsx(sx,{children:T?d.jsx(ux,{children:"Cargando tickets..."}):E?d.jsxs(cx,{children:["Error al cargar tickets: ",E]}):d.jsx(d.Fragment,{children:n==="pending"?d.jsx(d.Fragment,{children:m.length===0?d.jsxs(gf,{children:[d.jsx(mf,{children:"📋"}),d.jsx(vf,{children:"No tienes tickets pendientes"}),d.jsx(yf,{children:"Aquí aparecerán los tickets que hayas creado y aún no han sido atendidos."})]}):m.map(O=>d.jsx(Ul,{ticket:O,mode:"employee",formatDate:N,getPriorityColor:R,isResolved:!1,isExpanded:f===O.idTicket,onToggleExpand:z,onShowDetails:he},O.idTicket))}):d.jsx(d.Fragment,{children:_.length===0?d.jsxs(gf,{children:[d.jsx(mf,{children:"✅"}),d.jsx(vf,{children:"No tienes tickets resueltos"}),d.jsx(yf,{children:"Aquí aparecerán los tickets que hayan sido atendidos."})]}):_.map(O=>d.jsx(Ul,{ticket:O,mode:"employee",formatDate:N,getPriorityColor:R,isResolved:!0,isExpanded:f===O.idTicket,onToggleExpand:z,onShowDetails:he},O.idTicket))})})})})}),d.jsx(ax,{children:d.jsx(lx,{onClick:()=>s(!0),children:"+ Crear Nuevo Ticket"})}),v&&d.jsx(dx,{children:d.jsxs(fx,{children:[d.jsxs(hx,{children:[d.jsxs("h3",{children:["Detalles - Ticket #",w==null?void 0:w.idTicket]}),d.jsx(px,{onClick:()=>y(!1),children:"×"})]}),d.jsxs(gx,{children:[d.jsxs(Wn,{children:[d.jsx(qn,{children:"Fecha creación:"}),d.jsx(Hn,{children:N(w==null?void 0:w.fechaCreacion)})]}),d.jsxs(Wn,{children:[d.jsx(qn,{children:"Tipo:"}),d.jsx(Hn,{children:(qe=w==null?void 0:w.tiposSolicitud)==null?void 0:qe.tipoSolicitud})]}),d.jsxs(Wn,{children:[d.jsx(qn,{children:"Prioridad:"}),d.jsx(Hn,{children:(P=w==null?void 0:w.prioridades)==null?void 0:P.prioridad})]}),d.jsxs(Wn,{children:[d.jsx(qn,{children:"Descripción:"}),d.jsx(Hn,{children:w==null?void 0:w.descripcion})]}),(w==null?void 0:w.atenciones)&&w.atenciones.length>0&&d.jsxs(d.Fragment,{children:[d.jsxs(Wn,{children:[d.jsx(qn,{children:"Respuesta:"}),d.jsx(Hn,{style:{textAlign:"left"},children:d.jsx(yx,{children:w.atenciones[0].respuesta||"No hay respuesta disponible"})})]}),d.jsxs(wx,{children:[d.jsx("strong",{children:"Atendido por:"})," ",((A=w.atenciones[0].usuarios)==null?void 0:A.nombre)||"No disponible"," ",d.jsx("br",{}),d.jsx("strong",{children:"Fecha de atención:"})," ",w.atenciones[0].fechaAtencion?N(w.atenciones[0].fechaAtencion):"No disponible"]})]})]}),d.jsx(mx,{children:d.jsx(vx,{onClick:()=>y(!1),children:"Cerrar"})})]})})]})},Q_=x.div`
   min-height: 100vh;
-
   padding: 1rem;
   display: flex;
   flex-direction: column;
@@ -1492,7 +1491,7 @@ Option 2: Install and provide the "ws" package:
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
   display: flex;
   flex-direction: column;
-  min-height: 100vw;
+  flex: 1;
 `,pf=x.button`
   flex: 1;
   padding: 1rem 1.5rem;
@@ -1516,6 +1515,7 @@ Option 2: Install and provide the "ws" package:
   padding: 1rem;
   align-content: start;
   flex: 1;
+  min-height: 400px;
 
   @media (max-width: 1400px) {
     grid-template-columns: repeat(3, minmax(250px, 1fr));
@@ -1532,8 +1532,10 @@ Option 2: Install and provide the "ws" package:
     padding: 0.5rem;
   }
 `,ax=x.div`
-  padding: 1rem 1.5rem 1.5rem;
-  border-top: 1px solid #dee2e6;
+  flex-shrink: 0;
+  padding: 1rem;
+  border-radius: 12px;
+  margin-top: 1rem;
 `,lx=x.button`
   width: 100%;
   background: var(--color-accent);
@@ -1551,19 +1553,33 @@ Option 2: Install and provide the "ws" package:
     transform: translateY(-1px);
   }
 `,ux=x.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 3rem;
   color: var(--color-gray);
   font-size: 1.1rem;
+  min-height: 300px;
 `,cx=x.div`
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 3rem;
   color: #dc3545;
   font-size: 1rem;
+  min-height: 300px;
 `,gf=x.div`
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   padding: 3rem;
   color: var(--color-gray);
+  min-height: 300px;
 `,mf=x.div`
   font-size: 3rem;
   margin-bottom: 1rem;
