@@ -381,7 +381,45 @@ export const useAtenciones = (user) => {
     try {
       setLoading(true);
       
-      // 1. Crear seguimiento con idUsuario que delega e idEstado = 2 (delegado)
+      // 0. Invalidar todos los tokens anteriores para este ticket (en caso de re-delegación)
+      const { error: invalidateTokenError } = await supabase
+        .from('ticket_tokens')
+        .update({ usado: true, fecha_uso: new Date().toISOString() })
+        .eq('id_ticket', idTicket)
+        .eq('usado', false);
+
+      // No lanzar error si no hay tokens que invalidar
+      if (invalidateTokenError) {
+        console.warn('Advertencia al invalidar tokens en delegación:', invalidateTokenError);
+      }
+      
+      // 2. Obtener datos completos del ticket antes de delegar
+      const { data: ticketCompleto, error: fetchError } = await supabase
+        .from('tickets')
+        .select(`
+          *,
+          empleados (
+            nombre,
+            plantas (planta)
+          ),
+          tiposSolicitud (tipoSolicitud),
+          prioridades (prioridad)
+        `)
+        .eq('idTicket', idTicket)
+        .single();
+
+      if (fetchError) throw fetchError;
+
+      // 3. Obtener datos del usuario destinatario
+      const { data: usuarioDestino, error: usuarioError } = await supabase
+        .from('usuarios')
+        .select('idUsuario, nombre, correo')
+        .eq('idUsuario', idUsuarioDestino)
+        .single();
+
+      if (usuarioError) throw usuarioError;
+      
+      // 4. Crear seguimiento con idUsuario que delega e idEstado = 2 (delegado)
       const { error: seguimientoError } = await supabase
         .from('seguimientos')
         .insert({
@@ -392,7 +430,7 @@ export const useAtenciones = (user) => {
 
       if (seguimientoError) throw seguimientoError;
       
-      // 2. Actualizar el idEstado del ticket a 2
+      // 4. Actualizar el idEstado del ticket a 2
       const { error: ticketError } = await supabase
         .from('tickets')
         .update({ idEstado: 2 })
@@ -400,17 +438,53 @@ export const useAtenciones = (user) => {
 
       if (ticketError) throw ticketError;
       
-      // 3. Guardar la delegación en la tabla 'delegaciones'
+      // 5. Desactivar delegaciones anteriores para este ticket
+      const { error: desactivarError } = await supabase
+        .from('delegaciones')
+        .update({ bActivo: false })
+        .eq('idTicket', idTicket)
+        .eq('bActivo', true);
+
+      if (desactivarError) throw desactivarError;
+      
+      // 6. Crear nueva delegación activa
       const { error: delegacionError } = await supabase
         .from('delegaciones')
         .insert({
           idTicket,
           idUsuario: idUsuarioDestino
+          // bActivo es TRUE por defecto
         });
 
       if (delegacionError) throw delegacionError;
+
+      // 7. Enviar notificación por email (si está configurado)
+      try {
+        const { enviarNotificacionDelegacion } = await import('../services/notificationService.js');
+        
+        // Enviar notificación completa (token + email)
+        const notificationResult = await enviarNotificacionDelegacion(ticketCompleto, usuarioDestino);
+        
+        if (notificationResult.success) {
+          console.log('Notificación enviada exitosamente:', {
+            token: notificationResult.token,
+            directLink: notificationResult.directLink,
+            emailSent: notificationResult.emailResult.success
+          });
+        } else {
+          console.warn('Error enviando notificación (delegación completada):', notificationResult.error);
+        }
+      } catch (notificationError) {
+        console.warn('Error en sistema de notificaciones (delegación completada):', notificationError);
+        // No fallar la delegación por problemas de notificación
+      }
       
-      return { success: true, mensaje: 'Ticket delegado exitosamente' };
+      return { 
+        success: true, 
+        mensaje: 'Ticket delegado exitosamente.',
+        ticketData: ticketCompleto,
+        usuarioDestino
+      };
     } catch (err) {
       console.error('Error al delegar el ticket:', err);
       return { success: false, error: err.message };
@@ -469,7 +543,19 @@ export const useAtenciones = (user) => {
     
     setLoading(true);
     try {
-      // 1. Crear nuevo seguimiento con idEstado = 2 (delegado)
+      // 1. Invalidar TODOS los tokens anteriores para este ticket
+      const { error: invalidateTokenError } = await supabase
+        .from('ticket_tokens')
+        .update({ usado: true, fecha_uso: new Date().toISOString() })
+        .eq('id_ticket', idTicket)
+        .eq('usado', false);
+
+      // No lanzar error si no hay tokens que invalidar
+      if (invalidateTokenError) {
+        console.warn('Advertencia al invalidar tokens anteriores:', invalidateTokenError);
+      }
+
+      // 2. Crear nuevo seguimiento con idEstado = 2 (delegado)
       const { error: seguimientoError } = await supabase
         .from('seguimientos')
         .insert({
@@ -480,7 +566,7 @@ export const useAtenciones = (user) => {
 
       if (seguimientoError) throw seguimientoError;
       
-      // 2. Desactivar delegación anterior
+      // 3. Desactivar delegación anterior
       const { error: desactivarError } = await supabase
         .from('delegaciones')
         .update({ bActivo: false })
@@ -489,7 +575,7 @@ export const useAtenciones = (user) => {
 
       if (desactivarError) throw desactivarError;
       
-      // 3. Crear nueva delegación activa
+      // 4. Crear nueva delegación activa
       const { error: delegacionError } = await supabase
         .from('delegaciones')
         .insert({
@@ -499,6 +585,51 @@ export const useAtenciones = (user) => {
         });
 
       if (delegacionError) throw delegacionError;
+
+      // 5. Enviar notificación al nuevo usuario (solo si tiene idRol = 3)
+      try {
+        // Obtener datos del nuevo usuario y del ticket completo
+        const { data: nuevoUsuario, error: userError } = await supabase
+          .from('usuarios')
+          .select('idUsuario, idRol, correo, nombre')
+          .eq('idUsuario', nuevoIdUsuario)
+          .single();
+
+        if (!userError && nuevoUsuario && nuevoUsuario.idRol === 3) {
+          // Obtener datos completos del ticket
+          const { data: ticketCompleto, error: ticketError } = await supabase
+            .from('tickets')
+            .select(`
+              *,
+              empleados (nombre, plantas (planta)),
+              tiposSolicitud (tipoSolicitud),
+              prioridades (prioridad),
+              estados (estado)
+            `)
+            .eq('idTicket', idTicket)
+            .single();
+
+          if (!ticketError && ticketCompleto) {
+            // Importar dinámicamente el servicio de notificaciones
+            const { enviarNotificacionDelegacion } = await import('../services/notificationService.js');
+            
+            const notificationResult = await enviarNotificacionDelegacion(ticketCompleto, nuevoUsuario);
+            
+            if (!notificationResult.success) {
+              console.error('Error al enviar notificación de reasignación:', notificationResult.error);
+              // No fallar toda la operación por error en notificación
+            } else {
+              console.log('Notificación de reasignación enviada exitosamente:', {
+                token: notificationResult.token,
+                email: nuevoUsuario.correo
+              });
+            }
+          }
+        }
+      } catch (notificationError) {
+        console.error('Error en proceso de notificación de reasignación:', notificationError);
+        // No fallar toda la operación por error en notificación
+      }
       
       // El ticket mantiene idEstado = 2 (delegado)
       

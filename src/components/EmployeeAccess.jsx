@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useAppAuth } from "../contexts/AuthContext.jsx";
 import { usePlantas, useEsquemasPago } from "../hooks/useTickets.js";
@@ -14,6 +15,7 @@ const EmployeeAccess = () => {
   const [step, setStep] = useState(1); // 1: Código empleado, 2: Datos completos
   
   const { employeeLogin } = useAppAuth();
+  const navigate = useNavigate();
   const { plantas, loading: loadingPlantas } = usePlantas();
   const { esquemas, loading: loadingEsquemas } = useEsquemasPago();
   const { buscarEmpleadoPorCodigo, crearEmpleado, loading: loadingEmpleados } = useEmpleados();
@@ -55,7 +57,8 @@ const EmployeeAccess = () => {
         };
         
         employeeLogin(loginData);
-        // Empleado autenticado exitosamente
+        // Empleado autenticado exitosamente - redirigir
+        navigate('/employee');
       } else {
         // Empleado no encontrado, mostrar formulario de registro
         setStep(2);
@@ -103,7 +106,8 @@ const EmployeeAccess = () => {
         idEsquemaPago: result.empleado.idEsquemaPago || null
       });
       
-      // Empleado registrado y autenticado exitosamente
+      // Empleado registrado y autenticado exitosamente - redirigir
+      navigate('/employee');
     } catch (err) {
       setError("Error al procesar el registro");
       console.error("Error:", err);

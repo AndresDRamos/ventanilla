@@ -262,14 +262,22 @@ const TicketCard = ({
             {getResponsable && (
               <PropertyRow>
                 <PropertyLabel>
-                  {/* Mostrar "Responsable:" para idRol 1 y 2, "Asignado por:" para idRol 3 */}
-                  {currentUser?.idRol === 3 ? "Asignado por:" : "Responsable:"}
+                  {/* Para idRol 3: si es delegado mostrar "Delegado a:", si no "Asignado por:" */}
+                  {/* Para idRol 1 y 2: mostrar "Responsable:" o "Delegado a:" según el estado */}
+                  {currentUser?.idRol === 3 ? 
+                    (ticket.idEstado === 2 ? "Delegado a:" : "Asignado por:") :
+                    (ticket.idEstado === 2 ? "Delegado a:" : "Responsable:")
+                  }
                 </PropertyLabel>
                 <PropertyValue>
-                  {getResponsable(
-                    ticket.empleados?.idPlanta,
-                    ticket.idTipoSolicitud
-                  )}
+                  {/* Si el ticket está delegado (estado 2), mostrar el usuario delegado */}
+                  {ticket.idEstado === 2 && getUsuarioDelegado(ticket) ? 
+                    getUsuarioDelegado(ticket) :
+                    getResponsable(
+                      ticket.empleados?.idPlanta,
+                      ticket.idTipoSolicitud
+                    )
+                  }
                 </PropertyValue>
               </PropertyRow>
             )}
@@ -299,7 +307,10 @@ const TicketCard = ({
             
             {getResponsable && (
               <PropertyRow>
-                <PropertyLabel>Responsable:</PropertyLabel>
+                <PropertyLabel>
+                  {/* Para todos los roles: si es delegado mostrar "Delegado a:", si no "Responsable:" */}
+                  {ticket.idEstado === 2 ? "Delegado a:" : "Responsable:"}
+                </PropertyLabel>
                 <PropertyValue>
                   {/* Si el ticket está delegado (estado 2), mostrar el usuario delegado */}
                   {ticket.idEstado === 2 && getUsuarioDelegado(ticket) ? 

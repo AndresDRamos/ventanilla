@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import styled from "styled-components";
 import { useAppAuth } from "../contexts/AuthContext.jsx";
 
@@ -7,6 +8,7 @@ const AdminAccess = () => {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const { adminLogin, loading } = useAppAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -20,7 +22,8 @@ const AdminAccess = () => {
     const result = await adminLogin(username.trim(), password);
 
     if (result.success) {
-      // Login exitoso
+      // Login exitoso - redirigir al dashboard admin
+      navigate('/admin');
     } else {
       setError(result.error);
     }

@@ -2,6 +2,11 @@
 
 // Función para formatear fecha para mostrar al usuario
 export const formatMexicanDate = (dateString) => {
+  // Validar que dateString existe y no es null/undefined
+  if (!dateString) {
+    return 'Fecha no disponible';
+  }
+  
   // Parsear manualmente para evitar conversión automática de zona horaria
   if (dateString.includes('T') && dateString.includes('+00:00')) {
     // Es una fecha UTC de Supabase, extraer directamente los valores

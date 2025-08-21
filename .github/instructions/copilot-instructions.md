@@ -1,7 +1,7 @@
 # Copilot Instructions - Ventanilla CH
 
 ## System Architecture Overview
-This is a React + Vite ticket management system with Supabase backend for EZI company. The app provides dual authentication (employees/administrators) with role-based access control.
+This is a React + Vite ticket management system with Supabase backend for EZI company. The app provides dual authentication (employees/administrators) with role-based access control and complex ticket workflow management.
 
 ### Core Architecture
 - **Frontend**: React 18.2 + Vite with styled-components
@@ -14,11 +14,14 @@ This is a React + Vite ticket management system with Supabase backend for EZI co
 ## Database Schema (Supabase)
 ```
 empleados: idEmpleado, codigoEmpleado, nombre, idPlanta, idEsquemaPago
-tickets: idTicket, idEmpleado, idTipoSolicitud, descripcion, idPrioridad, fechaCreacion, estado
+tickets: idTicket, idEmpleado, idTipoSolicitud, descripcion, idPrioridad, idEstado
 plantas: idPlanta, planta
-usuarios: idUsuario, nombre, usuario, contraseña, idRol (1=admin, 2=supervisor)
-atenciones: idAtencion, idTicket, idUsuario, respuesta, fechaAtencion
+usuarios: idUsuario, nombre, usuario, contraseña, idRol (1=admin, 2=supervisor, 3=delegated)
+atenciones: idAtencion, idTicket, respuesta, calificacion, comentario
 asignaciones: idAsignacion, idUsuario, idPlanta, idTipoSolicitud
+seguimientos: idSeguimiento, idTicket, idUsuario, idEstado, fecha (tracks all state changes)
+delegaciones: idDelegacion, idTicket, idUsuario, bActivo (tracks ticket assignments)
+estados: idEstado, estado (1=new, 2=delegated, 3=attended, 4=closed, 5=cancelled)
 ```
 
 ## Key Development Patterns
@@ -29,14 +32,22 @@ asignaciones: idAsignacion, idUsuario, idPlanta, idTipoSolicitud
 - Admin login: Username/password validation → redirect to `AdminDashboard`
 - State managed in `AuthContext` with localStorage persistence
 
-### 2. Custom Hooks Pattern
-All data operations use custom hooks located in `/src/utils/`:
-- `useEmployeeTickets.js` - Employee ticket CRUD operations
-- `useAdminTickets.js` - Admin ticket management with filtering
+### 2. Custom Hooks Pattern - MOVED TO `/src/hooks/`
+All data operations use custom hooks now located in `/src/hooks/`:
+- `useEmployeeTickets.js` - Employee ticket CRUD + rating system
+- `useAdminTickets.js` - Admin ticket management with role-based filtering
 - `useEmpleados.js` - Employee management operations
-- `useTickets.js` - Base ticket operations + dropdown data (plantas, tipos, prioridades)
+- `useTickets.js` - Base ticket operations + dropdown data
+- `useUsuariosAtencion.js` - User tracking for ticket attendance
+- `useSeguimientos.js` - State change tracking system
 
-### 3. Styled Components Convention
+### 3. Ticket State Management (CRITICAL)
+**5-State Workflow**: 1=new → 2=delegated → 3=attended → 4=closed → 5=cancelled
+- All state changes tracked in `seguimientos` table with user and timestamp
+- `delegaciones` table tracks active assignments (`bActivo` flag)
+- Role-based visibility: idRol=1 (full access), idRol=2 (assigned only), idRol=3 (delegated only)
+
+### 4. Styled Components Convention
 **CRITICAL**: Always use transient props ($ prefix) to prevent React warnings:
 ```jsx
 // ✅ Correct
@@ -52,13 +63,14 @@ const StyledButton = styled.button`
 <StyledButton active={isActive}>Click me</StyledButton>
 ```
 
-### 4. Component Architecture
-- `TicketCard`: Unified component with mode prop ("admin"|"employee") 
-- `TicketModal`: Detailed ticket view with full information display
+### 5. Component Architecture
+- `TicketCard`: Unified component with mode prop ("admin"|"employee")
+- `TicketModal`: Multi-mode modal (view/response/attend) with role-based features
+- `StatsSection`: Admin dashboard statistics with state-based filtering
 - Modal pattern: State in parent, pass ticket + onClose callback
 - Error boundaries: Use ErrorBoundary wrapper for components
 
-### 5. Date Handling (Mexico Timezone)
+### 6. Date Handling (Mexico Timezone)
 Use `formatMexicanDate()` from `dateUtils.js` - implements manual parsing to avoid timezone conversion issues with Supabase UTC dates:
 ```javascript
 // Handles: "2025-08-19T09:29:52.726772+00:00" → "19/08/2025, 09:29"
@@ -79,61 +91,82 @@ npm run dev
 # Build for production  
 npm run build
 
-# Deploy to GitHub Pages
+# Deploy to GitHub Pages (configured for /ventanilla/ base)
 npm run deploy
 ```
 
 ### Role-Based Filtering (Critical for Admin Dashboard)
-Non-admin users (idRol !== 1) can only see tickets assigned to their plantas/tipos via `asignaciones` table. The filtering logic in `useAdminTickets.js` applies this automatically.
+- idRol=1: Full access to all tickets
+- idRol=2: Only tickets matching user's `asignaciones` (planta + tipo combinations)  
+- idRol=3: Only tickets in active `delegaciones` for that user
+- Filtering logic in `useAdminTickets.js` applies automatically after data fetch
 
-### Environment Variables Required
-```
-VITE_APP_SUPABASE_URL=your_supabase_url
-VITE_APP_ANON_KEY=your_supabase_anon_key
+### Complex Query Patterns
+Always include nested relationships for complete ticket data:
+```javascript
+const { data } = await supabase.from('tickets').select(`
+  *,
+  empleados (nombre, plantas (planta)),
+  tiposSolicitud (tipoSolicitud),
+  atenciones (respuesta, calificacion, comentario),
+  seguimientos (fecha, idEstado, usuarios (nombre)),
+  delegaciones (bActivo, usuarios (nombre))
+`);
 ```
 
 ## File Structure Conventions
 - `/src/pages/` - Route-level components (AdminDashboard, EmployeeTicketsPage, LoginPage)
 - `/src/components/` - Reusable UI components with styled-components
-- `/src/utils/` - Custom hooks and utilities  
+- `/src/hooks/` - Custom hooks and data operations (moved from utils)
 - `/src/contexts/` - React Context providers
-- `/src/styles/` - Global styles with CSS custom properties
+- `/src/styles/` - Global styles with estado/prioridad color variables
+
+## Critical Workflows
+
+### 1. Ticket State Transitions
+Every state change requires:
+1. Insert `seguimiento` record with idUsuario, idTicket, idEstado
+2. Update ticket.idEstado 
+3. Handle delegation/assignment in `delegaciones` table if applicable
+
+### 2. Employee Rating System
+Closed tickets (idEstado=4) show rating interface:
+- 1-3 star rating stored in `atenciones.calificacion`
+- Optional comment in `atenciones.comentario`
+- Updates via `calificarTicket()` function with transaction handling
+
+### 3. Migration Pattern
+Auto-migration for tickets missing initial `seguimientos`:
+- Checks for idEstado=1 seguimiento on ticket fetch
+- Creates missing records inline with null idUsuario
+- Implemented in `useAdminTickets.js` fetchTickets function
 
 ## Common Gotchas & Solutions
 
-### 1. Mobile Responsiveness
-Always include mobile breakpoints in styled-components:
+### 1. Estado-Based Colors
+Use CSS custom properties from `GlobalStyles.jsx`:
 ```jsx
-const Container = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-  }
-`;
+border-left: 4px solid var(--color-estado-${estadoName});
+background: var(--color-estado-${estadoName}-bg);
 ```
 
-### 2. Supabase Relationships  
-Use nested selects for foreign key relationships:
+### 2. Delegated Ticket Display
+For idEstado=2 tickets in employee view, show delegated user name instead of assigned responsible:
 ```javascript
-const { data } = await supabase
-  .from('tickets')
-  .select(`
-    *,
-    empleados (nombre, plantas (planta)),
-    tiposSolicitud (tipoSolicitud)
-  `);
+const getUsuarioDelegado = (ticket) => {
+  if (ticket.idEstado === 2) {
+    return ticket.delegaciones?.find(d => d.bActivo)?.usuarios?.nombre;
+  }
+  return null;
+};
 ```
 
-### 3. Component Mode Pattern
-Many components accept a `mode` prop to handle admin vs employee behavior:
-```jsx
-<TicketCard 
-  ticket={ticket}
-  mode="admin" // or "employee"
-  onCardClick={handleClick}
-/>
+### 3. Modal Footer Visibility
+Never show footer buttons for closed tickets (idEstado=4):
+```javascript
+{mode !== "response" && ticket.idEstado !== 4 && (
+  <ModalFooter>...</ModalFooter>
+)}
 ```
 
 ## Integration Points
@@ -142,4 +175,4 @@ Many components accept a `mode` prop to handle admin vs employee behavior:
 - AuthContext provides user state across all components
 - Error handling via try/catch in hooks with user-friendly messages
 
-When editing this system, prioritize maintaining the dual authentication flow, respecting role-based permissions, and preserving the mobile-responsive design patterns.
+When editing this system, prioritize maintaining the state transition integrity, respecting role-based permissions, and preserving the ticket workflow audit trail through seguimientos.
