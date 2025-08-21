@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import EmployeeQuestionnaire from '../components/EmployeeQuestionnaire.jsx';
 import EmployeeTicketsPage from './EmployeeTicketsPage.jsx';
 import TicketSuccess from '../components/TicketSuccess.jsx';
-import useEmployeeTickets from '../utils/useEmployeeTickets.js';
+import useEmployeeTickets from '../hooks/useEmployeeTickets.js';
 
 const EmployeeDashboard = ({ employeeData, onLogout }) => {
   const [currentStep, setCurrentStep] = useState('loading'); // loading, tickets, questionnaire, success

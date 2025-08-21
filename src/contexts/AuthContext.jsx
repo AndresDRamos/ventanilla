@@ -59,8 +59,6 @@ export const AuthProvider = ({ children }) => {
 
   // Login de empleado
   const employeeLogin = useCallback((data) => {
-    console.log('Datos del empleado:', data);
-    
     const employeeUser = {
       id: data.idEmpleado,
       idEmpleado: data.idEmpleado,

@@ -55,8 +55,6 @@ export const useAppAuth = () => {
 
   // Login de empleado
   const employeeLogin = useCallback((data) => {
-    console.log('Datos del empleado:', data);
-    
     const employeeUser = {
       ...data,
       type: 'employee'

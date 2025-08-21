@@ -15,15 +15,6 @@ const TicketCard = ({
   onToggleExpand,
   currentUser = null, // Usuario actual para determinar el rol
 }) => {
-  // Función para obtener el usuario delegado activo
-  const getUsuarioDelegado = (ticket) => {
-    if (ticket.idEstado === 2 && ticket.delegaciones?.length > 0) {
-      const delegacionActiva = ticket.delegaciones.find(d => d.bActivo === true);
-      return delegacionActiva?.usuarios?.nombre || null;
-    }
-    return null;
-  };
-
   // Función para obtener la fecha de creación desde seguimientos únicamente
   const getFechaCreacion = (ticket) => {
     const fechaSeguimiento = ticket.seguimientos?.find(
@@ -301,14 +292,10 @@ const TicketCard = ({
               <PropertyRow>
                 <PropertyLabel>Responsable:</PropertyLabel>
                 <PropertyValue>
-                  {/* Si el ticket está delegado (estado 2), mostrar el usuario delegado */}
-                  {ticket.idEstado === 2 && getUsuarioDelegado(ticket) ? 
-                    getUsuarioDelegado(ticket) :
-                    getResponsable(
-                      ticket.empleados?.idPlanta,
-                      ticket.idTipoSolicitud
-                    )
-                  }
+                  {getResponsable(
+                    ticket.empleados?.idPlanta,
+                    ticket.idTipoSolicitud
+                  )}
                 </PropertyValue>
               </PropertyRow>
             )}
@@ -427,6 +414,29 @@ const StatusBadge = styled.button`
     transform: translateY(-1px);
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     filter: brightness(1.1);
+  }
+`;
+
+const EditButton = styled.button`
+  background: none;
+  border: none;
+  color: var(--color-accent);
+  cursor: pointer;
+  padding: 0.5rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+
+  &:hover {
+    background: rgba(55, 58, 54, 0.1);
+    transform: scale(1.1);
+  }
+
+  svg {
+    width: 16px;
+    height: 16px;
   }
 `;
 

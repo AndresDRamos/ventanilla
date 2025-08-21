@@ -22,14 +22,14 @@ const LoginPage = () => {
         <TabContainer>
           <TabNav>
             <Tab
-              active={activeTab === "employee"}
+              $active={activeTab === "employee"}
               onClick={() => setActiveTab("employee")}
             >
               <TabIcon>👤</TabIcon>
               Empleado
             </Tab>
             <Tab
-              active={activeTab === "admin"}
+              $active={activeTab === "admin"}
               onClick={() => setActiveTab("admin")}
             >
               <TabIcon>🔑</TabIcon>
@@ -106,19 +106,19 @@ const Tab = styled.button`
   gap: 8px;
   padding: 16px 20px;
   border: none;
-  background: ${(props) => (props.active ? "white" : "transparent")};
-  color: ${(props) => (props.active ? "var(--primary-color)" : "#6c757d")};
+  background: ${(props) => (props.$active ? "white" : "transparent")};
+  color: ${(props) => (props.$active ? "var(--primary-color)" : "#6c757d")};
   font-size: 14px;
-  font-weight: ${(props) => (props.active ? "600" : "500")};
+  font-weight: ${(props) => (props.$active ? "600" : "500")};
   cursor: pointer;
   transition: all 0.2s ease;
   border-bottom: ${(props) =>
-    props.active ? "2px solid var(--primary-color)" : "2px solid transparent"};
+    props.$active ? "2px solid var(--primary-color)" : "2px solid transparent"};
 
   &:hover {
-    background: ${(props) => (props.active ? "white" : "#f8f9fa")};
+    background: ${(props) => (props.$active ? "white" : "#f8f9fa")};
     color: ${(props) =>
-      props.active ? "var(--primary-color)" : "var(--text-color)"};
+      props.$active ? "var(--primary-color)" : "var(--text-color)"};
   }
 `;
 

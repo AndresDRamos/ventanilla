@@ -17,12 +17,10 @@ const AdminAccess = () => {
       return;
     }
 
-    console.log("Intentando autenticar admin con:", { usuario: username.trim(), contraseña: password });
-
     const result = await adminLogin(username.trim(), password);
 
     if (result.success) {
-      console.log("Admin autenticado correctamente:", result.user);
+      // Login exitoso
     } else {
       setError(result.error);
     }
@@ -49,6 +47,7 @@ const AdminAccess = () => {
           value={username}
           onChange={(e) => setUsername(e.target.value)}
           disabled={loading}
+          autoComplete="username"
         />
       </FormGroup>
 
@@ -60,6 +59,7 @@ const AdminAccess = () => {
           value={password}
           onChange={(e) => setPassword(e.target.value)}
           disabled={loading}
+          autoComplete="current-password"
         />
       </FormGroup>
 

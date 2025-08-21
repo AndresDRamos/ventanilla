@@ -1,9 +1,11 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
 import { useAppAuth } from "../contexts/AuthContext.jsx";
-import useEmployeeTickets from "../utils/useEmployeeTickets.js";
-import { useEmpleados } from "../utils/useEmpleados.js";
-import { useEsquemasPago } from "../utils/useTickets.js";
+import useEmployeeTickets from "../hooks/useEmployeeTickets.js";
+import { useEmpleados } from "../hooks/useEmpleados.js";
+import { useEsquemasPago } from "../hooks/useTickets.js";
+import { useAsignaciones } from "../hooks/useAdminTickets.js";
+import { useUsuariosAtencion } from "../hooks/useUsuariosAtencion.js";
 import { formatMexicanDate } from "../utils/dateUtils.js";
 import TicketCard from "../components/TicketCard.jsx";
 import EmployeeQuestionnaire from "../components/EmployeeQuestionnaire.jsx";
@@ -17,9 +19,18 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   const [expandedTicketId, setExpandedTicketId] = useState(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
+  const [usuarioQueAtendio, setUsuarioQueAtendio] = useState(null);
+  
+  // Estados para calificación
+  const [calificacion, setCalificacion] = useState(1);
+  const [comentario, setComentario] = useState("");
+  const [showCalificacion, setShowCalificacion] = useState(false);
+  const [loadingCalificacion, setLoadingCalificacion] = useState(false);
 
   const { buscarEmpleadoPorCodigo } = useEmpleados();
   const { esquemas } = useEsquemasPago();
+  const { getResponsable } = useAsignaciones();
+  const { obtenerUsuarioQueAtendio } = useUsuariosAtencion();
 
   const {
     pendingTickets,
@@ -27,6 +38,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
     loading: loadingTickets,
     error,
     refetch,
+    calificarTicket,
   } = useEmployeeTickets(empleadoCompleto?.idEmpleado);
 
   // Combinar estados de loading
@@ -100,9 +112,61 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   };
 
   // Función para manejar la vista de detalles
-  const handleShowDetails = (ticket) => {
+  const handleShowDetails = async (ticket) => {
     setSelectedTicket(ticket);
     setShowDetailModal(true);
+    setUsuarioQueAtendio(null);
+    
+    // Resetear estados de calificación
+    setCalificacion(1);
+    setComentario("");
+    setShowCalificacion(false);
+    
+    // Para tickets atendidos o cancelados, obtener información del usuario
+    if ((ticket.idEstado === 3 || ticket.idEstado === 5) || (ticket.atenciones && ticket.atenciones.length > 0)) {
+      try {
+        const usuario = await obtenerUsuarioQueAtendio(ticket.idTicket, ticket.idEstado);
+        setUsuarioQueAtendio(usuario);
+        
+        // Si el ticket está atendido (idEstado = 3) y no tiene calificación, mostrar opción
+        if (ticket.idEstado === 3 && ticket.atenciones && ticket.atenciones.length > 0 && 
+            (!ticket.atenciones[0].calificacion || ticket.atenciones[0].calificacion === 0)) {
+          setShowCalificacion(true);
+        }
+      } catch (error) {
+        console.error('Error obteniendo usuario que atendió/canceló:', error);
+        setUsuarioQueAtendio(null);
+      }
+    }
+  };
+
+  // Función para enviar calificación
+  const handleSubmitCalificacion = async () => {
+    if (comentario.trim() && calificacion === 1) {
+      const confirmar = window.confirm(
+        "Has escrito un comentario pero tienes la calificación mínima (1 estrella). ¿Deseas continuar?"
+      );
+      if (!confirmar) return;
+    }
+
+    setLoadingCalificacion(true);
+    try {
+      const resultado = await calificarTicket(selectedTicket.idTicket, calificacion, comentario);
+      
+      if (resultado.success) {
+        alert('Calificación enviada exitosamente. El ticket ha sido cerrado.');
+        setShowCalificacion(false);
+        setShowDetailModal(false);
+        // refetch ya se ejecuta dentro de calificarTicket
+      } else {
+        alert(`Error al enviar la calificación: ${resultado.error}`);
+      }
+    } catch (error) {
+      console.error('Error enviando calificación:', error);
+      alert('Error al enviar la calificación. Inténtalo de nuevo.');
+    } finally {
+      setLoadingCalificacion(false);
+    }
   };
 
   const handleTicketSubmitted = () => {
@@ -156,7 +220,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
 
         <TabsContainer>
           <Tab
-            active={activeTab === "pending"}
+            $active={activeTab === "pending"}
             onClick={() => {
               setActiveTab("pending");
               setExpandedTicketId(null);
@@ -165,7 +229,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
             Tickets Pendientes ({pendingTickets.length})
           </Tab>
           <Tab
-            active={activeTab === "resolved"}
+            $active={activeTab === "resolved"}
             onClick={() => {
               setActiveTab("resolved");
               setExpandedTicketId(null);
@@ -204,6 +268,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
                           mode="employee"
                           formatDate={formatDate}
                           getPriorityColor={getPriorityColor}
+                          getResponsable={getResponsable}
                           isResolved={false}
                           isExpanded={expandedTicketId === ticket.idTicket}
                           onToggleExpand={handleToggleExpand}
@@ -230,6 +295,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
                           mode="employee"
                           formatDate={formatDate}
                           getPriorityColor={getPriorityColor}
+                          getResponsable={getResponsable}
                           isResolved={true}
                           isExpanded={expandedTicketId === ticket.idTicket}
                           onToggleExpand={handleToggleExpand}
@@ -257,66 +323,133 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
         <Modal>
           <ModalContent>
             <ModalHeader>
-              <h3>Detalles - Ticket #{selectedTicket?.idTicket}</h3>
+              <HeaderContent>
+                <PriorityBadge
+                  $color={getPriorityColor(selectedTicket?.idPrioridad)}
+                >
+                  {selectedTicket?.prioridades?.prioridad}
+                </PriorityBadge>
+                <h3>#{selectedTicket?.idTicket}</h3>
+              </HeaderContent>
               <CloseButton onClick={() => setShowDetailModal(false)}>
                 ×
               </CloseButton>
             </ModalHeader>
 
             <ModalBody>
+              {/* Fecha de generación del ticket */}
               <InfoRow>
-                <InfoLabel>Fecha creación:</InfoLabel>
+                <InfoLabel>Fecha de creación:</InfoLabel>
                 <InfoValue>
-                  {formatDate(selectedTicket?.fechaCreacion)}
+                  {(() => {
+                    const fechaCreacion = selectedTicket?.seguimientos?.find(s => s.idEstado === 1)?.fecha;
+                    return fechaCreacion ? formatMexicanDate(fechaCreacion) : "Pendiente seguimiento inicial";
+                  })()}
                 </InfoValue>
               </InfoRow>
 
+              {/* Tipo de solicitud */}
               <InfoRow>
                 <InfoLabel>Tipo:</InfoLabel>
-                <InfoValue>
-                  {selectedTicket?.tiposSolicitud?.tipoSolicitud}
-                </InfoValue>
+                <InfoValue>{selectedTicket?.tiposSolicitud?.tipoSolicitud}</InfoValue>
               </InfoRow>
 
-              <InfoRow>
-                <InfoLabel>Prioridad:</InfoLabel>
-                <InfoValue>{selectedTicket?.prioridades?.prioridad}</InfoValue>
-              </InfoRow>
+              {/* Descripción */}
+              <DescriptionSection>
+                <DescriptionText>{selectedTicket?.descripcion}</DescriptionText>
+              </DescriptionSection>
 
-              <InfoRow>
-                <InfoLabel>Descripción:</InfoLabel>
-                <InfoValue>{selectedTicket?.descripcion}</InfoValue>
-              </InfoRow>
+              {/* Respuesta y información de atención - Solo para tickets atendidos, cancelados o cerrados */}
+              {(selectedTicket?.atenciones && selectedTicket.atenciones.length > 0) || selectedTicket?.idEstado === 5 ? (
+                <>
+                  {/* Mostrar respuesta solo para tickets que tienen atenciones */}
+                  {selectedTicket?.atenciones && selectedTicket.atenciones.length > 0 && (
+                    <ResponseSection>
+                      <ResponseTitle>Respuesta:</ResponseTitle>
+                      <ResponseDisplay>
+                        {selectedTicket.atenciones[0].respuesta || "No hay respuesta disponible"}
+                      </ResponseDisplay>
+                    </ResponseSection>
+                  )}
 
-              {/* Mostrar respuesta solo si el ticket está resuelto */}
-              {selectedTicket?.atenciones &&
-                selectedTicket.atenciones.length > 0 && (
-                  <>
+                  <AttentionInfo $idEstado={selectedTicket?.idEstado}>
                     <InfoRow>
-                      <InfoLabel>Respuesta:</InfoLabel>
-                      <InfoValue style={{ textAlign: "left" }}>
-                        <ResponseDisplay>
-                          {selectedTicket.atenciones[0].respuesta ||
-                            "No hay respuesta disponible"}
-                        </ResponseDisplay>
+                      <InfoLabel>
+                        {selectedTicket?.idEstado === 5 ? "Cancelado por:" : "Atendido por:"}
+                      </InfoLabel>
+                      <InfoValue>{usuarioQueAtendio?.nombre || "No disponible"}</InfoValue>
+                    </InfoRow>
+                    <InfoRow>
+                      <InfoLabel>
+                        {selectedTicket?.idEstado === 5 ? "Fecha de cancelación:" : "Fecha de atención:"}
+                      </InfoLabel>
+                      <InfoValue>
+                        {(() => {
+                          // Obtener fecha desde seguimientos según el estado
+                          const estadoBuscado = selectedTicket?.idEstado === 5 ? 5 : 3;
+                          const fechaEstado = selectedTicket?.seguimientos?.find(s => s.idEstado === estadoBuscado)?.fecha;
+                          return fechaEstado ? formatMexicanDate(fechaEstado) : "No disponible";
+                        })()}
                       </InfoValue>
                     </InfoRow>
+                  </AttentionInfo>
 
-                    <ResponseInfo>
-                      <strong>Atendido por:</strong>{" "}
-                      {selectedTicket.atenciones[0].usuarios?.nombre ||
-                        "No disponible"}{" "}
-                      <br />
-                      <strong>Fecha de atención:</strong>{" "}
-                      {selectedTicket.atenciones[0].fechaAtencion
-                        ? formatDate(selectedTicket.atenciones[0].fechaAtencion)
-                        : "No disponible"}
-                    </ResponseInfo>
-                  </>
-                )}
+                  {/* Mostrar calificación existente si la hay - Solo para tickets atendidos */}
+                  {selectedTicket?.atenciones && selectedTicket.atenciones.length > 0 && 
+                   selectedTicket.atenciones[0].calificacion && selectedTicket.atenciones[0].calificacion > 0 && (
+                    <CalificacionExistente>
+                      <CalificacionExistenteTitle>Tu calificación:</CalificacionExistenteTitle>
+                      <StarsDisplay>
+                        {Array.from({length: 3}, (_, i) => (
+                          <Star key={i} $filled={i < selectedTicket.atenciones[0].calificacion}>
+                            ★
+                          </Star>
+                        ))}
+                      </StarsDisplay>
+                      {selectedTicket.atenciones[0].comentario && (
+                        <ComentarioExistente>
+                          <strong>Tu comentario:</strong> {selectedTicket.atenciones[0].comentario}
+                        </ComentarioExistente>
+                      )}
+                    </CalificacionExistente>
+                  )}
+                </>
+              ) : null}
+
+              {/* Sección de calificación compacta para tickets atendidos sin calificar */}
+              {showCalificacion && selectedTicket?.idEstado === 3 && (
+                <>
+                  <CalificacionTitle>¿Cómo lo calificarías?</CalificacionTitle>
+                  
+                  <StarsContainer>
+                    {Array.from({length: 3}, (_, i) => (
+                      <StarButton
+                        key={i}
+                        $filled={i < calificacion}
+                        onClick={() => setCalificacion(i + 1)}
+                      />
+                    ))}
+                  </StarsContainer>
+                  
+                  <ComentarioInput
+                    placeholder="Comentario adicional (opcional)"
+                    value={comentario}
+                    onChange={(e) => setComentario(e.target.value)}
+                    rows={2}
+                  />
+                </>
+              )}
             </ModalBody>
 
             <ModalFooter>
+              {showCalificacion && selectedTicket?.idEstado === 3 && (
+                <SubmitCalificacionButton 
+                  onClick={handleSubmitCalificacion}
+                  disabled={loadingCalificacion}
+                >
+                  {loadingCalificacion ? "Enviando..." : "Enviar Calificación"}
+                </SubmitCalificacionButton>
+              )}
               <CancelButton onClick={() => setShowDetailModal(false)}>
                 Cerrar
               </CancelButton>
@@ -439,16 +572,16 @@ const Tab = styled.button`
   flex: 1;
   padding: 1rem 1.5rem;
   border: none;
-  background: ${(props) => (props.active ? "white" : "#e9ecef")};
-  color: ${(props) => (props.active ? "var(--color-primary)" : "#6c757d")};
-  font-weight: ${(props) => (props.active ? "600" : "500")};
+  background: ${(props) => (props.$active ? "white" : "#e9ecef")};
+  color: ${(props) => (props.$active ? "var(--color-primary)" : "#6c757d")};
+  font-weight: ${(props) => (props.$active ? "600" : "500")};
   cursor: pointer;
   transition: all 0.2s ease;
   font-size: 0.9rem;
 
   &:hover {
-    background: ${(props) => (props.active ? "white" : "#d1ecf1")};
-    color: ${(props) => (props.active ? "var(--color-primary)" : "#495057")};
+    background: ${(props) => (props.$active ? "white" : "#d1ecf1")};
+    color: ${(props) => (props.$active ? "var(--color-primary)" : "#495057")};
   }
 `;
 
@@ -580,12 +713,13 @@ const ModalHeader = styled.div`
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 1.5rem;
+  padding: 1rem;
   border-bottom: 1px solid #dee2e6;
 
   h3 {
     margin: 0;
     color: var(--color-primary);
+    font-size: 1.1rem;
   }
 `;
 
@@ -601,8 +735,123 @@ const CloseButton = styled.button`
   }
 `;
 
+// Styled components básicos para info
+const InfoRow = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding: 0.4rem 0;
+  border-bottom: 1px dotted #e9ecef;
+  
+  &:last-child {
+    border-bottom: none;
+  }
+`;
+
+const InfoLabel = styled.span`
+  font-weight: 600;
+  color: var(--color-primary);
+  font-size: 0.9rem;
+  min-width: fit-content;
+  margin-right: 1rem;
+`;
+
+const InfoValue = styled.span`
+  color: #495057;
+  font-size: 0.9rem;
+  text-align: right;
+  flex: 1;
+
+  @media (max-width: 768px) {
+    text-align: left;
+  }
+`;
+
+const AttentionInfo = styled.div`
+  margin-top: 0.8rem;
+  padding: 0.8rem;
+  background: ${props => {
+    switch(props.$idEstado) {
+      case 5: return 'var(--color-estado-cancelado-bg)'; // Cancelado - Fondo rojo claro
+      case 3: return '#e9f7ef'; // Atendido - Fondo verde claro
+      default: return '#e9f7ef';
+    }
+  }};
+  border-radius: 4px;
+  border-left: 4px solid ${props => {
+    switch(props.$idEstado) {
+      case 5: return 'var(--color-estado-cancelado)'; // Cancelado - Borde rojo
+      case 3: return '#28a745'; // Atendido - Borde verde
+      default: return '#28a745';
+    }
+  }};
+  
+  ${InfoRow} {
+    padding: 0.25rem 0;
+    margin-bottom: 0;
+  }
+  
+  ${InfoLabel} {
+    font-size: 0.85rem;
+  }
+  
+  ${InfoValue} {
+    font-size: 0.85rem;
+  }
+`;
+
+const CalificacionExistenteTitle = styled.div`
+  font-weight: 600;
+  color: var(--color-primary);
+  margin-bottom: 0.5rem;
+`;
+
+// Styled components existentes...
+const HeaderContent = styled.div`
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+`;
+
+const PriorityBadge = styled.span`
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  color: white;
+  background: ${(props) => props.$color || 'var(--color-gray)'};
+`;
+
+const DescriptionSection = styled.div`
+  margin-bottom: 1rem;
+`;
+
+const DescriptionText = styled.p`
+  background: #f8f9fa;
+  padding: 1rem;
+  border-radius: 4px;
+  border-left: 4px solid var(--color-primary);
+  color: #495057;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  margin: 0;
+`;
+
+const ResponseSection = styled.div`
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #dee2e6;
+`;
+
+const ResponseTitle = styled.h5`
+  margin: 0 0 1rem 0;
+  color: var(--color-primary);
+  font-weight: 600;
+`;
+
 const ModalBody = styled.div`
-  padding: 1.5rem;
+  padding: 1rem;
 
   p {
     margin-bottom: 1rem;
@@ -621,7 +870,7 @@ const ModalFooter = styled.div`
   display: flex;
   justify-content: flex-end;
   gap: 1rem;
-  padding: 1.5rem;
+  padding: 1rem;
   border-top: 1px solid #dee2e6;
 `;
 
@@ -638,37 +887,6 @@ const CancelButton = styled.button`
   }
 `;
 
-const InfoRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-  gap: 1rem;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-`;
-
-const InfoLabel = styled.span`
-  font-weight: 600;
-  color: var(--color-primary);
-  font-size: 0.9rem;
-  min-width: fit-content;
-`;
-
-const InfoValue = styled.span`
-  color: #495057;
-  font-size: 0.9rem;
-  text-align: right;
-  flex: 1;
-
-  @media (max-width: 768px) {
-    text-align: left;
-  }
-`;
-
 const ResponseDisplay = styled.div`
   background: #f8f9fa;
   padding: 1rem;
@@ -680,13 +898,124 @@ const ResponseDisplay = styled.div`
   white-space: pre-wrap;
 `;
 
-const ResponseInfo = styled.div`
-  padding: 1rem;
-  background: #e9f7ef;
+// Styled components para el sistema de calificación
+const CalificacionTitle = styled.h5`
+  margin: 1.5rem 0 0.8rem 0;
+  color: var(--color-primary);
+  text-align: center;
+  font-size: 1rem;
+`;
+
+const StarsContainer = styled.div`
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.3rem;
+  margin-bottom: 0.8rem;
+`;
+
+const StarButton = styled.button`
+  background: none !important;
+  border: none;
+  font-size: 1.8rem;
+  cursor: pointer;
+  transition: color 0.2s ease;
+  padding: 0;
+  margin: 0 0.1rem;
+  
+  /* Eliminar todos los efectos de fondo y selección */
+  background-color: transparent !important;
+  box-shadow: none !important;
+  
+  /* Usar diferentes caracteres para relleno y borde más fino */
+  color: var(--color-accent);
+  
+  &:before {
+    content: ${props => props.$filled ? '"★"' : '"☆"'};
+  }
+
+  &:hover {
+    color: var(--color-accent);
+    background: none !important;
+    background-color: transparent !important;
+  }
+
+  &:focus {
+    outline: none;
+    background: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  &:active {
+    background: none !important;
+    background-color: transparent !important;
+    box-shadow: none !important;
+  }
+
+  &:visited {
+    background: none !important;
+    background-color: transparent !important;
+  }
+`;
+
+const ComentarioInput = styled.textarea`
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
   border-radius: 4px;
-  border-left: 4px solid #28a745;
-  color: #155724;
-  font-size: 0.9rem;
+  resize: vertical;
+  font-family: inherit;
+  
+  &:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 2px rgba(55, 58, 54, 0.1);
+  }
+`;
+
+const SubmitCalificacionButton = styled.button`
+  background: #28a745;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 600;
+  margin-right: 1rem;
+
+  &:hover:not(:disabled) {
+    background: #218838;
+  }
+
+  &:disabled {
+    background: #6c757d;
+    cursor: not-allowed;
+  }
+`;
+
+const CalificacionExistente = styled.div`
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #e8f5e8;
+  border-radius: 4px;
+  border: 1px solid #28a745;
+`;
+
+const StarsDisplay = styled.div`
+  display: inline-flex;
+  margin-left: 0.5rem;
+`;
+
+const Star = styled.span`
+  color: ${props => props.$filled ? '#ffc107' : '#ddd'};
+  font-size: 1.2rem;
+`;
+
+const ComentarioExistente = styled.div`
+  margin-top: 0.5rem;
+  font-style: italic;
+  color: #495057;
 `;
 
 export default EmployeeTicketsPage;

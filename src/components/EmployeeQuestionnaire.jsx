@@ -4,7 +4,7 @@ import {
   useTiposSolicitud,
   usePrioridades,
   useTickets,
-} from "../utils/useTickets.js";
+} from "../hooks/useTickets.js";
 
 const EmployeeQuestionnaire = ({
   employeeData,

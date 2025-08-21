@@ -6,14 +6,21 @@ import {
   useTicketStats,
   useAsignaciones,
   useAtenciones,
-} from "../utils/useAdminTickets.js";
+} from "../hooks/useAdminTickets.js";
 import {
   usePlantas,
   useTiposSolicitud,
   usePrioridades,
-} from "../utils/useTickets.js";
+} from "../hooks/useTickets.js";
+import { useUsuariosAtencion } from "../hooks/useUsuariosAtencion.js";
 import { formatMexicanDate } from "../utils/dateUtils.js";
-import TicketCard from "../components/TicketCard.jsx";
+
+// Components
+import DashboardHeader from "../components/DashboardHeader.jsx";
+import StatsSection from "../components/StatsSection.jsx";
+import FiltersSection from "../components/FiltersSection.jsx";
+import TicketsGrid from "../components/TicketsGrid.jsx";
+import TicketModal from "../components/TicketModal.jsx";
 
 const AdminDashboard = () => {
   const { user, logout } = useAppAuth();
@@ -32,13 +39,13 @@ const AdminDashboard = () => {
     empleado: "",
     sortBy: "fecha",
   });
-  const [filtersExpanded, setFiltersExpanded] = useState(false);
-  const [statsFilter, setStatsFilter] = useState("sinAtender"); // 'todos', 'sinAtender', 'respondidos'
-  const [showModal, setShowModal] = useState(false);
-  const [selectedTicket, setSelectedTicket] = useState(null);
-  const [respuesta, setRespuesta] = useState("");
-  const [showResponseModal, setShowResponseModal] = useState(false);
-  const [selectedResponseTicket, setSelectedResponseTicket] = useState(null);
+  const [statsFilter, setStatsFilter] = useState("sinAtender"); // 'sinAtender', 'reasignados', 'atendidos', 'cancelados', null
+  const [modalState, setModalState] = useState({
+    show: false,
+    mode: "view", // "view", "response", "attend"
+    ticket: null,
+  });
+  const [usuarioQueAtendio, setUsuarioQueAtendio] = useState(null);
   const [expandedTicketId, setExpandedTicketId] = useState(null);
 
   // Hooks para datos
@@ -49,7 +56,15 @@ const AdminDashboard = () => {
   } = useAdminTickets(user);
   const stats = useTicketStats(tickets);
   const { getResponsable } = useAsignaciones();
-  const { crearAtencion, loading: creatingAtencion } = useAtenciones();
+  const { 
+    crearAtencion, 
+    delegarTicket, 
+    cancelarTicket, 
+    reasignarTicket, 
+    autoasignarTicket,
+    loading: creatingAtencion 
+  } = useAtenciones(user);
+  const { obtenerUsuarioQueAtendio } = useUsuariosAtencion();
   const { plantas } = usePlantas();
   const { tipos } = useTiposSolicitud();
   const { prioridades } = usePrioridades();
@@ -85,53 +100,137 @@ const AdminDashboard = () => {
   };
 
   const handleAtender = (ticket) => {
-    setSelectedTicket(ticket);
-    setShowModal(true);
-    setRespuesta("");
+    setModalState({
+      show: true,
+      mode: "attend",
+      ticket: ticket,
+    });
   };
 
-  const handleVerRespuesta = (ticket) => {
-    setSelectedResponseTicket(ticket);
-    setShowResponseModal(true);
+  const handleVerRespuesta = async (ticket) => {
+    setModalState({
+      show: true,
+      mode: "response",
+      ticket: ticket,
+    });
+    
+    // Obtener información del usuario que atendió el ticket
+    try {
+      const usuario = await obtenerUsuarioQueAtendio(ticket.idTicket, ticket.idEstado);
+      setUsuarioQueAtendio(usuario);
+    } catch (error) {
+      console.error('Error obteniendo usuario que atendió:', error);
+      setUsuarioQueAtendio(null);
+    }
+  };
+
+  const handleCloseModal = () => {
+    setModalState({
+      show: false,
+      mode: "view",
+      ticket: null,
+    });
+    setUsuarioQueAtendio(null);
+  };
+
+  const handleSubmitAtencion = async (respuesta, actionType = "respond") => {
+    let result;
+
+    try {
+      if (actionType === "respond") {
+        result = await crearAtencion(
+          modalState.ticket.idTicket,
+          user.id,
+          respuesta
+        );
+      } else if (actionType === "cancel") {
+        result = await cancelarTicket(
+          modalState.ticket.idTicket,
+          user.id,
+          respuesta // En este caso, respuesta es el motivo de cancelación
+        );
+      }
+
+      if (result.success) {
+        handleCloseModal();
+        refetchTickets(filters); // Recargar tickets
+        // Popup removido - solo cerrar modal
+      } else {
+        alert("Error al procesar la solicitud: " + result.error);
+      }
+    } catch (error) {
+      alert("Error inesperado: " + error.message);
+    }
+  };
+
+  const handleDelegate = async (selectedUserId) => {
+    const result = await delegarTicket(
+      modalState.ticket.idTicket,
+      user.id,
+      selectedUserId
+    );
+
+    if (result.success) {
+      handleCloseModal();
+      refetchTickets(filters); // Recargar tickets
+      // Popup removido - solo cerrar modal
+    } else {
+      alert("Error al delegar el ticket: " + result.error);
+    }
+  };
+
+  // Nueva función para re-asignar ticket
+  const handleReassign = async (selectedUserId) => {
+    if (!modalState.ticket) return;
+
+    const result = await reasignarTicket(
+      modalState.ticket.idTicket,
+      selectedUserId
+    );
+
+    if (result.success) {
+      handleCloseModal();
+      refetchTickets(filters); // Recargar tickets
+    } else {
+      alert("Error al re-asignar el ticket: " + result.error);
+    }
+  };
+
+  // Nueva función para autoasignarse el ticket
+  const handleSelfAssign = async () => {
+    if (!modalState.ticket) return;
+
+    const result = await autoasignarTicket(modalState.ticket.idTicket);
+
+    if (result.success) {
+      // No cerrar el modal aquí, se cierra después de la respuesta
+      // El modal maneja la respuesta automáticamente después de autoasignar
+    } else {
+      alert("Error al autoasignarse el ticket: " + result.error);
+    }
   };
 
   const handleToggleExpand = (ticketId) => {
     setExpandedTicketId(expandedTicketId === ticketId ? null : ticketId);
   };
 
-  const handleSubmitAtencion = async () => {
-    if (!respuesta.trim()) {
-      alert("Debe ingresar una respuesta");
-      return;
-    }
-
-    const result = await crearAtencion(
-      selectedTicket.idTicket,
-      user.id,
-      respuesta.trim()
-    );
-
-    if (result.success) {
-      setShowModal(false);
-      setSelectedTicket(null);
-      setRespuesta("");
-      refetchTickets(filters); // Recargar tickets
-      alert("Atención registrada correctamente");
-    } else {
-      alert("Error al registrar la atención: " + result.error);
-    }
-  };
-
   // Filtrar tickets según el filtro de estadísticas
   const filteredTickets = tickets.filter((ticket) => {
-    const tieneAtencion = ticket.atenciones && ticket.atenciones.length > 0;
+    // Para usuarios con idRol = 3, no aplicar filtro de stats (no tienen acceso a la sección)
+    if (user?.idRol === 3 || !statsFilter) return true;
 
+    // Filtrar por estado de ticket según la selección
     switch (statsFilter) {
       case "sinAtender":
-        return !tieneAtencion;
-      case "respondidos":
-        return tieneAtencion;
-      case "todos":
+        return ticket.idEstado === 1;
+      case "reasignados":
+        return ticket.idEstado === 2;
+      case "atendidos":
+        return ticket.idEstado === 3;
+      case "cerrados":
+        return ticket.idEstado === 4;
+      case "cancelados":
+        return ticket.idEstado === 5;
       default:
         return true;
     }
@@ -172,313 +271,57 @@ const AdminDashboard = () => {
       {/* Área fija - Header, Stats y Filtros */}
       <FixedContent>
         {/* Header */}
-        <Header>
-          <AdminInfo>
-            <h1>Dashboard Administrativo</h1>
-            <p>Bienvenido, {user?.nombre}</p>
-          </AdminInfo>
-          <LogoutButton onClick={logout}>Cerrar Sesión</LogoutButton>
-        </Header>
+        <DashboardHeader user={user} onLogout={logout} />
 
-        {/* Estadísticas */}
-        <StatsSection>
-          <StatCard
-            $active={statsFilter === "sinAtender"}
-            onClick={() => handleStatsFilter("sinAtender")}
-          >
-            <StatNumber>{stats.sinAtender}</StatNumber>
-            <StatLabel>Sin Atender</StatLabel>
-          </StatCard>
-          <StatCard
-            $active={statsFilter === "respondidos"}
-            onClick={() => handleStatsFilter("respondidos")}
-          >
-            <StatNumber>{stats.respondidos}</StatNumber>
-            <StatLabel>Atendidos</StatLabel>
-          </StatCard>
-          <StatCard
-            $active={statsFilter === "todos"}
-            onClick={() => handleStatsFilter("todos")}
-          >
-            <StatNumber>{stats.total}</StatNumber>
-            <StatLabel>Totales</StatLabel>
-          </StatCard>
-        </StatsSection>
+        {/* Estadísticas - Solo para usuarios con idRol 1 y 2 */}
+        {user?.idRol !== 3 && (
+          <StatsSection
+            stats={stats}
+            statsFilter={statsFilter}
+            onStatsFilterChange={handleStatsFilter}
+          />
+        )}
 
         {/* Filtros */}
-        <FiltersSection>
-          <FiltersHeader onClick={() => setFiltersExpanded(!filtersExpanded)}>
-            <h3>Filtros</h3>
-            <ExpandIcon $expanded={filtersExpanded}>
-              {filtersExpanded ? "▲" : "▼"}
-            </ExpandIcon>
-          </FiltersHeader>
-
-          {filtersExpanded && (
-            <FiltersContent>
-              <FiltersRow>
-                <FilterGroup>
-                  <label>Planta:</label>
-                  <select
-                    value={tempFilters.planta}
-                    onChange={(e) =>
-                      handleTempFilterChange("planta", e.target.value)
-                    }
-                  >
-                    <option value="">Todas</option>
-                    {plantas.map((planta) => (
-                      <option key={planta.idPlanta} value={planta.idPlanta}>
-                        {planta.planta}
-                      </option>
-                    ))}
-                  </select>
-                </FilterGroup>
-
-                <FilterGroup>
-                  <label>Tipo:</label>
-                  <select
-                    value={tempFilters.tipoSolicitud}
-                    onChange={(e) =>
-                      handleTempFilterChange("tipoSolicitud", e.target.value)
-                    }
-                  >
-                    <option value="">Todos</option>
-                    {tipos
-                      .sort((a, b) => a.idTipoSolicitud - b.idTipoSolicitud)
-                      .map((tipo) => (
-                        <option
-                          key={tipo.idTipoSolicitud}
-                          value={tipo.idTipoSolicitud}
-                        >
-                          {tipo.tipoSolicitud}
-                        </option>
-                      ))}
-                  </select>
-                </FilterGroup>
-
-                <FilterGroup>
-                  <label>Prioridad:</label>
-                  <select
-                    value={tempFilters.prioridad}
-                    onChange={(e) =>
-                      handleTempFilterChange("prioridad", e.target.value)
-                    }
-                  >
-                    <option value="">Todas</option>
-                    {prioridades.map((prioridad) => (
-                      <option
-                        key={prioridad.idPrioridad}
-                        value={prioridad.idPrioridad}
-                      >
-                        {prioridad.prioridad}
-                      </option>
-                    ))}
-                  </select>
-                </FilterGroup>
-
-                <FilterGroup>
-                  <label>Empleado:</label>
-                  <input
-                    type="text"
-                    placeholder="Código o nombre..."
-                    value={tempFilters.empleado}
-                    onChange={(e) =>
-                      handleTempFilterChange("empleado", e.target.value)
-                    }
-                  />
-                </FilterGroup>
-              </FiltersRow>
-
-              <SortSection>
-                <label>Ordenar por:</label>
-                <select
-                  value={tempFilters.sortBy}
-                  onChange={(e) =>
-                    handleTempFilterChange("sortBy", e.target.value)
-                  }
-                >
-                  <option value="fecha">Fecha de creación</option>
-                  <option value="prioridad">Prioridad</option>
-                </select>
-              </SortSection>
-
-              <FilterButtons>
-                <ClearButton onClick={handleClearFilters}>Limpiar</ClearButton>
-                <ApplyButton onClick={handleApplyFilters}>Aplicar</ApplyButton>
-              </FilterButtons>
-            </FiltersContent>
-          )}
-        </FiltersSection>
+        <FiltersSection
+          tempFilters={tempFilters}
+          onTempFilterChange={handleTempFilterChange}
+          onApplyFilters={handleApplyFilters}
+          onClearFilters={handleClearFilters}
+          plantas={plantas}
+          tipos={tipos}
+          prioridades={prioridades}
+        />
       </FixedContent>
 
       {/* Área de Tickets con Scroll Independiente */}
-      <ScrollableTicketsArea>
-        <TicketsSection>
-          {filteredTickets.length === 0 ? (
-            <EmptyMessage>No se encontraron tickets</EmptyMessage>
-          ) : (
-            filteredTickets.map((ticket) => (
-              <TicketCard
-                key={ticket.idTicket}
-                ticket={ticket}
-                mode="admin"
-                onAtender={handleAtender}
-                onVerRespuesta={handleVerRespuesta}
-                getResponsable={getResponsable}
-                formatDate={formatDate}
-                getPriorityColor={getPriorityColor}
-                isExpanded={expandedTicketId === ticket.idTicket}
-                onToggleExpand={handleToggleExpand}
-              />
-            ))
-          )}
-        </TicketsSection>
-      </ScrollableTicketsArea>
+      <TicketsGrid
+        tickets={filteredTickets}
+        mode="admin"
+        onAtender={handleAtender}
+        onVerRespuesta={handleVerRespuesta}
+        getResponsable={getResponsable}
+        formatDate={formatDate}
+        getPriorityColor={getPriorityColor}
+        expandedTicketId={expandedTicketId}
+        onToggleExpand={handleToggleExpand}
+        currentUser={user}
+      />
 
-      {/* Modal de Atención */}
-      {showModal && (
-        <Modal>
-          <ModalContent>
-            <ModalHeader>
-              <h3>Atender Ticket #{selectedTicket?.idTicket}</h3>
-              <CloseButton onClick={() => setShowModal(false)}>×</CloseButton>
-            </ModalHeader>
-
-            <ModalBody>
-              <InfoRow>
-                <InfoLabel>Empleado:</InfoLabel>
-                <InfoValue>
-                  {selectedTicket?.empleados?.nombre} (#
-                  {selectedTicket?.empleados?.codigoEmpleado})
-                </InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Planta:</InfoLabel>
-                <InfoValue>
-                  {selectedTicket?.empleados?.plantas?.planta}
-                </InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Tipo:</InfoLabel>
-                <InfoValue>
-                  {selectedTicket?.tiposSolicitud?.tipoSolicitud}
-                </InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Prioridad:</InfoLabel>
-                <InfoValue>{selectedTicket?.prioridades?.prioridad}</InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Descripción:</InfoLabel>
-                <InfoValue>{selectedTicket?.descripcion}</InfoValue>
-              </InfoRow>
-
-              <label>Respuesta:</label>
-              <ResponseTextArea
-                rows="4"
-                value={respuesta}
-                onChange={(e) => setRespuesta(e.target.value)}
-                placeholder="Escriba su respuesta al ticket..."
-              />
-            </ModalBody>
-
-            <ModalFooter>
-              <CancelButton onClick={() => setShowModal(false)}>
-                Cancelar
-              </CancelButton>
-              <SubmitButton
-                onClick={handleSubmitAtencion}
-                disabled={creatingAtencion}
-              >
-                {creatingAtencion ? "Enviando..." : "Enviar Respuesta"}
-              </SubmitButton>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-      )}
-
-      {/* Modal de Ver Respuesta */}
-      {showResponseModal && (
-        <Modal>
-          <ModalContent>
-            <ModalHeader>
-              <h3>Respuesta - Ticket #{selectedResponseTicket?.idTicket}</h3>
-              <CloseButton onClick={() => setShowResponseModal(false)}>
-                ×
-              </CloseButton>
-            </ModalHeader>
-
-            <ModalBody>
-              <InfoRow>
-                <InfoLabel>Empleado:</InfoLabel>
-                <InfoValue>
-                  {selectedResponseTicket?.empleados?.nombre} (#
-                  {selectedResponseTicket?.empleados?.codigoEmpleado})
-                </InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Planta:</InfoLabel>
-                <InfoValue>
-                  {selectedResponseTicket?.empleados?.plantas?.planta}
-                </InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Tipo:</InfoLabel>
-                <InfoValue>
-                  {selectedResponseTicket?.tiposSolicitud?.tipoSolicitud}
-                </InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Prioridad:</InfoLabel>
-                <InfoValue>
-                  {selectedResponseTicket?.prioridades?.prioridad}
-                </InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Descripción:</InfoLabel>
-                <InfoValue>{selectedResponseTicket?.descripcion}</InfoValue>
-              </InfoRow>
-
-              <InfoRow>
-                <InfoLabel>Respuesta proporcionada:</InfoLabel>
-                <InfoValue style={{ textAlign: "left" }}>
-                  <ResponseDisplay>
-                    {selectedResponseTicket?.atenciones?.[0]?.respuesta ||
-                      "No hay respuesta disponible"}
-                  </ResponseDisplay>
-                </InfoValue>
-              </InfoRow>
-
-              <ResponseInfo>
-                <strong>Atendido por:</strong>{" "}
-                {selectedResponseTicket?.atenciones?.[0]?.usuarios?.nombre ||
-                  "No disponible"}{" "}
-                <br />
-                <strong>Fecha de atención:</strong>{" "}
-                {selectedResponseTicket?.atenciones?.[0]?.fechaAtencion
-                  ? formatDate(
-                      selectedResponseTicket.atenciones[0].fechaAtencion
-                    )
-                  : "No disponible"}
-              </ResponseInfo>
-            </ModalBody>
-
-            <ModalFooter>
-              <CancelButton onClick={() => setShowResponseModal(false)}>
-                Cerrar
-              </CancelButton>
-            </ModalFooter>
-          </ModalContent>
-        </Modal>
-      )}
+      {/* Modal de Atención/Respuesta */}
+      <TicketModal
+        ticket={modalState.ticket}
+        isOpen={modalState.show}
+        onClose={handleCloseModal}
+        mode={modalState.mode}
+        onSubmit={handleSubmitAtencion}
+        onDelegate={handleDelegate}
+        onReassign={handleReassign}
+        onSelfAssign={handleSelfAssign}
+        currentUser={user}
+        loading={creatingAtencion}
+        usuarioQueAtendio={usuarioQueAtendio}
+      />
     </Container>
   );
 };
@@ -488,7 +331,6 @@ const Container = styled.div`
   overflow: hidden;
   display: flex;
   flex-direction: column;
-  max-width: 1400px;
   margin: 0 auto;
   padding: 1rem;
   background-color: #f8f9fa;
@@ -506,31 +348,6 @@ const FixedContent = styled.div`
   gap: 0.5rem;
 `;
 
-const ScrollableTicketsArea = styled.div`
-  flex: 1;
-  overflow-y: auto;
-  margin-top: 0.5rem;
-
-  /* Estilo del scrollbar */
-  &::-webkit-scrollbar {
-    width: 8px;
-  }
-
-  &::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-  }
-
-  &::-webkit-scrollbar-thumb {
-    background: #c1c1c1;
-    border-radius: 4px;
-
-    &:hover {
-      background: #a8a8a8;
-    }
-  }
-`;
-
 const LoadingMessage = styled.div`
   display: flex;
   justify-content: center;
@@ -538,497 +355,6 @@ const LoadingMessage = styled.div`
   height: 50vh;
   font-size: 1.2rem;
   color: var(--color-gray);
-`;
-
-const Header = styled.header`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  padding: 1rem;
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
-
-  @media (max-width: 768px) {
-    padding: 0.8rem;
-    flex-wrap: wrap;
-    gap: 0.5rem;
-  }
-`;
-
-const AdminInfo = styled.div`
-  h1 {
-    margin: 0;
-    color: var(--color-primary);
-    font-size: 1.5rem;
-
-    @media (max-width: 768px) {
-      font-size: 1.2rem;
-    }
-  }
-
-  p {
-    margin: 0.3rem 0 0 0;
-    color: var(--color-gray);
-    font-size: 0.9rem;
-
-    @media (max-width: 768px) {
-      font-size: 0.8rem;
-    }
-  }
-`;
-
-const LogoutButton = styled.button`
-  background-color: var(--color-danger);
-  color: white;
-  border: none;
-  padding: 0.5rem 1rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-family: inherit;
-  font-weight: 500;
-  font-size: 0.9rem;
-  transition: all 0.2s ease;
-
-  &:hover {
-    background-color: #d63384;
-    transform: translateY(-1px);
-  }
-`;
-
-const StatsSection = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.8rem;
-  margin-bottom: 0.8rem;
-  flex-shrink: 0;
-
-  @media (max-width: 768px) {
-    gap: 0.5rem;
-    margin-bottom: 0.6rem;
-  }
-`;
-
-const StatCard = styled.div`
-  background: white;
-  padding: 0.8rem;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  text-align: center;
-  transition: all 0.2s ease;
-  cursor: pointer;
-  position: relative;
-  border: 2px solid
-    ${(props) => (props.$active ? "var(--color-primary)" : "transparent")};
-
-  @media (max-width: 768px) {
-    padding: 0.5rem;
-  }
-
-  &:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
-  }
-
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: ${(props) => (props.$active ? "80%" : "0")};
-    height: 3px;
-    background: var(--color-primary);
-    transition: width 0.3s ease;
-  }
-`;
-
-const StatNumber = styled.div`
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: var(--color-primary);
-  margin-bottom: 0.2rem;
-
-  @media (max-width: 768px) {
-    font-size: 1.2rem;
-    margin-bottom: 0.1rem;
-  }
-`;
-
-const StatLabel = styled.div`
-  color: var(--color-gray);
-  font-weight: 500;
-  font-size: 0.9rem;
-
-  @media (max-width: 768px) {
-    font-size: 0.75rem;
-  }
-`;
-
-const FiltersSection = styled.div`
-  background: white;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
-  margin-bottom: 1rem;
-  flex-shrink: 0;
-
-  @media (max-width: 768px) {
-    padding: 0;
-  }
-`;
-
-const FiltersHeader = styled.div`
-  padding: 1rem;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  cursor: pointer;
-  border-bottom: ${(props) => (props.$expanded ? "1px solid #eee" : "none")};
-
-  h3 {
-    margin: 0;
-    color: var(--color-primary);
-    font-size: 1.1rem;
-  }
-
-  &:hover {
-    background-color: #f8f9fa;
-  }
-
-  @media (max-width: 768px) {
-    padding: 0.8rem;
-  }
-`;
-
-const ExpandIcon = styled.span`
-  color: var(--color-primary);
-  font-size: 0.9rem;
-  transition: transform 0.2s ease;
-`;
-
-const FiltersContent = styled.div`
-  padding: 1rem;
-  padding-top: 0.5rem;
-
-  @media (max-width: 768px) {
-    padding: 0.8rem;
-    padding-top: 0.5rem;
-  }
-`;
-
-const FiltersRow = styled.div`
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 0.8rem;
-  margin-bottom: 0.6rem;
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    gap: 0.6rem;
-  }
-
-  @media (max-width: 480px) {
-    grid-template-columns: 1fr;
-  }
-`;
-
-const FilterGroup = styled.div`
-  display: flex;
-  flex-direction: column;
-
-  label {
-    margin-bottom: 0.3rem;
-    font-weight: 500;
-    color: var(--color-primary);
-    font-size: 0.85rem;
-  }
-
-  select,
-  input {
-    padding: 0.4rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.85rem;
-
-    &:focus {
-      outline: none;
-      border-color: var(--color-accent);
-    }
-  }
-`;
-
-const SortSection = styled.div`
-  display: flex;
-  align-items: center;
-  gap: 0.8rem;
-  margin-bottom: 1rem;
-
-  label {
-    font-weight: 500;
-    color: var(--color-primary);
-    font-size: 0.85rem;
-  }
-
-  select {
-    padding: 0.4rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 0.85rem;
-
-    &:focus {
-      outline: none;
-      border-color: var(--color-accent);
-    }
-  }
-`;
-
-const FilterButtons = styled.div`
-  display: flex;
-  justify-content: space-between;
-  gap: 0.8rem;
-  margin-top: 1rem;
-  padding-top: 0.8rem;
-  border-top: 1px solid #eee;
-
-  @media (max-width: 480px) {
-    flex-direction: column;
-    gap: 0.6rem;
-  }
-`;
-
-const ApplyButton = styled.button`
-  background-color: var(--color-accent);
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-
-  &:hover:not(:disabled) {
-    background-color: #e54a2e;
-  }
-
-  &:disabled {
-    background-color: var(--color-gray);
-    cursor: not-allowed;
-  }
-`;
-
-const ClearButton = styled.button`
-  background: #6c757d;
-  color: white;
-  border: none;
-  padding: 0.6rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-  font-size: 0.9rem;
-  font-weight: 500;
-
-  &:hover {
-    background: #5a6268;
-  }
-`;
-
-const TicketsSection = styled.div`
-  display: grid;
-  grid-template-columns: repeat(3, minmax(300px, 1fr));
-  grid-column-gap: 1rem;
-  grid-row-gap: 1rem;
-  padding: 1rem;
-  align-content: start;
-  min-height: 100%;
-
-  @media (max-width: 1200px) {
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  }
-
-  @media (max-width: 768px) {
-    grid-template-columns: 1fr;
-    grid-column-gap: 0.8rem;
-    grid-row-gap: 0.8rem;
-    padding: 0.5rem;
-  }
-`;
-
-const EmptyMessage = styled.div`
-  grid-column: 1 / -1;
-  text-align: center;
-  padding: 3rem;
-  color: var(--color-gray);
-  font-size: 1.1rem;
-  background: white;
-  border-radius: 8px;
-`;
-
-const Modal = styled.div`
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  z-index: 1000;
-`;
-
-const ModalContent = styled.div`
-  background: white;
-  border-radius: 8px;
-  width: 90%;
-  max-width: 600px;
-  max-height: 100vh;
-  overflow-y: auto;
-`;
-
-const ModalHeader = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid #dee2e6;
-
-  h3 {
-    margin: 0;
-    color: var(--color-primary);
-  }
-`;
-
-const CloseButton = styled.button`
-  background: none;
-  border: none;
-  font-size: 1.5rem;
-  cursor: pointer;
-  color: var(--color-gray);
-
-  &:hover {
-    color: var(--color-primary);
-  }
-`;
-
-const ModalBody = styled.div`
-  padding: 1.5rem;
-
-  p {
-    margin-bottom: 1rem;
-    color: var(--color-primary);
-  }
-
-  label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: var(--color-primary);
-  }
-`;
-
-const ResponseTextArea = styled.textarea`
-  width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 4px;
-  font-family: inherit;
-  resize: vertical;
-
-  &:focus {
-    outline: none;
-    border-color: var(--color-accent);
-  }
-`;
-
-const ModalFooter = styled.div`
-  display: flex;
-  justify-content: flex-end;
-  gap: 1rem;
-  padding: 1.5rem;
-  border-top: 1px solid #dee2e6;
-`;
-
-const CancelButton = styled.button`
-  background: #6c757d;
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-
-  &:hover {
-    background: #5a6268;
-  }
-`;
-
-const SubmitButton = styled.button`
-  background-color: var(--color-accent);
-  color: white;
-  border: none;
-  padding: 0.75rem 1.5rem;
-  border-radius: 6px;
-  cursor: pointer;
-
-  &:hover:not(:disabled) {
-    background-color: #e54a2e;
-  }
-
-  &:disabled {
-    background-color: var(--color-gray);
-    cursor: not-allowed;
-  }
-`;
-
-const ResponseDisplay = styled.div`
-  background: #f8f9fa;
-  padding: 1rem;
-  border-radius: 4px;
-  border: 1px solid #dee2e6;
-  margin-bottom: 1rem;
-  color: #495057;
-  line-height: 1.5;
-  white-space: pre-wrap;
-`;
-
-const ResponseInfo = styled.div`
-  padding: 1rem;
-  background: #e9f7ef;
-  border-radius: 4px;
-  border-left: 4px solid #28a745;
-  color: #155724;
-  font-size: 0.9rem;
-`;
-
-const InfoRow = styled.div`
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-start;
-  margin-bottom: 0.75rem;
-  gap: 1rem;
-
-  @media (max-width: 768px) {
-    flex-direction: column;
-    gap: 0.25rem;
-  }
-`;
-
-const InfoLabel = styled.span`
-  font-weight: 600;
-  color: var(--color-primary);
-  font-size: 0.9rem;
-  min-width: fit-content;
-`;
-
-const InfoValue = styled.span`
-  color: #495057;
-  font-size: 0.9rem;
-  text-align: right;
-  flex: 1;
-
-  @media (max-width: 768px) {
-    text-align: left;
-  }
 `;
 
 export default AdminDashboard;

@@ -1,8 +1,8 @@
 import { useState } from "react";
 import styled from "styled-components";
 import { useAppAuth } from "../contexts/AuthContext.jsx";
-import { usePlantas, useEsquemasPago } from "../utils/useTickets.js";
-import { useEmpleados } from "../utils/useEmpleados.js";
+import { usePlantas, useEsquemasPago } from "../hooks/useTickets.js";
+import { useEmpleados } from "../hooks/useEmpleados.js";
 
 const EmployeeAccess = () => {
   const [employeeCode, setEmployeeCode] = useState("");
@@ -54,8 +54,8 @@ const EmployeeAccess = () => {
           idEsquemaPago: result.empleado.idEsquemaPago || null
         };
         
-        const loginResult = employeeLogin(loginData);
-        console.log("Empleado autenticado:", loginResult.employee);
+        employeeLogin(loginData);
+        // Empleado autenticado exitosamente
       } else {
         // Empleado no encontrado, mostrar formulario de registro
         setStep(2);
@@ -94,7 +94,7 @@ const EmployeeAccess = () => {
       }
 
       // Empleado creado, hacer login
-      const loginResult = employeeLogin({
+      employeeLogin({
         idEmpleado: result.empleado.idEmpleado,
         codigoEmpleado: result.empleado.codigoEmpleado,
         empleado: result.empleado.nombre,
@@ -103,7 +103,7 @@ const EmployeeAccess = () => {
         idEsquemaPago: result.empleado.idEsquemaPago || null
       });
       
-      console.log("Empleado registrado y autenticado:", loginResult.employee);
+      // Empleado registrado y autenticado exitosamente
     } catch (err) {
       setError("Error al procesar el registro");
       console.error("Error:", err);
@@ -144,6 +144,7 @@ const EmployeeAccess = () => {
             }}
             disabled={loading || loadingEmpleados}
             required
+            autoComplete="employee-id"
           />
         </FormGroup>
 
@@ -176,6 +177,7 @@ const EmployeeAccess = () => {
           onChange={(e) => setFullName(e.target.value)}
           disabled={loading || loadingEmpleados || loadingEsquemas}
           required
+          autoComplete="name"
         />
       </FormGroup>
 

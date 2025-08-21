@@ -107,7 +107,7 @@ export const usePrioridades = () => {
         const { data, error } = await supabase
           .from('prioridades')
           .select('idPrioridad, prioridad')
-          .order('prioridad');
+          .order('idPrioridad');
 
         if (error) throw error;
         setPrioridades(data || []);
@@ -135,7 +135,30 @@ export const useTickets = () => {
       setLoading(true);
       setError(null);
 
-      const { data, error } = await supabase
+      // Primero obtener el usuario asignado basado en planta y tipo de solicitud
+      const { data: empleadoData } = await supabase
+        .from('empleados')
+        .select('idPlanta')
+        .eq('idEmpleado', ticketData.idEmpleado)
+        .single();
+
+      if (!empleadoData) {
+        throw new Error('No se encontró información del empleado');
+      }
+
+      const { data: asignacionData } = await supabase
+        .from('asignaciones')
+        .select('idUsuario')
+        .eq('idPlanta', empleadoData.idPlanta)
+        .eq('idTipoSolicitud', ticketData.idTipoSolicitud)
+        .single();
+
+      if (!asignacionData) {
+        throw new Error('No se encontró usuario asignado para esta combinación de planta y tipo de solicitud');
+      }
+
+      // Crear el ticket (sin fechaCreacion, se manejará en seguimientos)
+      const { data: ticketCreado, error: ticketError } = await supabase
         .from('tickets')
         .insert([{
           idEmpleado: ticketData.idEmpleado,
@@ -143,11 +166,23 @@ export const useTickets = () => {
           descripcion: ticketData.descripcion,
           idPrioridad: ticketData.idPrioridad
         }])
-        .select();
+        .select()
+        .single();
 
-      if (error) throw error;
+      if (ticketError) throw ticketError;
 
-      return { success: true, ticket: data[0] };
+      // Crear el primer seguimiento con estado "Sin atender" (idEstado = 1)
+      const { error: seguimientoError } = await supabase
+        .from('seguimientos')
+        .insert([{
+          idTicket: ticketCreado.idTicket,
+          idUsuario: asignacionData.idUsuario,
+          idEstado: 1 // Sin atender
+        }]);
+
+      if (seguimientoError) throw seguimientoError;
+
+      return { success: true, ticket: ticketCreado };
     } catch (err) {
       setError(err.message);
       console.error('Error creating ticket:', err);
