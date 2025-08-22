@@ -7,32 +7,32 @@ const StatsSection = ({ stats, statsFilter, onStatsFilterChange }) => {
       id: 1,
       label: "Sin Atender",
       color: "var(--color-estado-sin-atender)",
-      count: stats.sinAtender
+      count: stats.sinAtender,
     },
     reasignados: {
       id: 2,
-      label: "Asignados", 
+      label: "Asignados",
       color: "var(--color-estado-delegado)",
-      count: stats.reasignados
+      count: stats.reasignados,
     },
     atendidos: {
       id: 3,
       label: "Atendidos",
       color: "var(--color-estado-atendido)",
-      count: stats.atendidos
+      count: stats.atendidos,
     },
     cerrados: {
       id: 4,
       label: "Cerrados",
       color: "var(--color-estado-cerrado)",
-      count: stats.cerrados
+      count: stats.cerrados,
     },
     cancelados: {
       id: 5,
       label: "Cancelados",
       color: "var(--color-estado-cancelado)",
-      count: stats.cancelados
-    }
+      count: stats.cancelados,
+    },
   };
 
   const handleCardClick = (stateKey) => {
@@ -47,7 +47,7 @@ const StatsSection = ({ stats, statsFilter, onStatsFilterChange }) => {
   return (
     <Container>
       <TicketCountLabel>Tickets: {stats.total}</TicketCountLabel>
-      
+
       <StatsGrid>
         {Object.entries(stateConfig).map(([stateKey, config]) => (
           <StatCard
@@ -56,7 +56,10 @@ const StatsSection = ({ stats, statsFilter, onStatsFilterChange }) => {
             $color={config.color}
             onClick={() => handleCardClick(stateKey)}
           >
-            <StatNumber $active={statsFilter === stateKey} $color={config.color}>
+            <StatNumber
+              $active={statsFilter === stateKey}
+              $color={config.color}
+            >
               {config.count}
             </StatNumber>
             <StatLabel $active={statsFilter === stateKey} $color={config.color}>
@@ -84,7 +87,7 @@ const TicketCountLabel = styled.div`
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: 0.5rem;
-  
+
   @media (max-width: 768px) {
     font-size: 0.8rem;
     margin-bottom: 0.4rem;
@@ -97,11 +100,11 @@ const StatsGrid = styled.div`
   gap: 0.8rem;
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, fr);
     gap: 0.5rem;
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 400px) {
     grid-template-columns: 1fr;
   }
 `;
@@ -133,7 +136,7 @@ const StatCard = styled.div`
     transform: translateX(-50%);
     width: ${(props) => (props.$active ? "100%" : "0")};
     height: 3px;
-    background: ${(props) => props.$active ? props.$color : "transparent"};
+    background: ${(props) => (props.$active ? props.$color : "transparent")};
     transition: width 0.25s ease;
   }
 `;
@@ -141,9 +144,7 @@ const StatCard = styled.div`
 const StatNumber = styled.div`
   font-size: 1.5rem;
   font-weight: bold;
-  color: ${(props) => 
-    props.$active ? props.$color : "var(--color-gray)"
-  };
+  color: ${(props) => (props.$active ? props.$color : "var(--color-gray)")};
   margin-bottom: 0.2rem;
   transition: color 0.2s ease;
 
@@ -154,9 +155,7 @@ const StatNumber = styled.div`
 `;
 
 const StatLabel = styled.div`
-  color: ${(props) => 
-    props.$active ? props.$color : "var(--color-gray)"
-  };
+  color: ${(props) => (props.$active ? props.$color : "var(--color-gray)")};
   font-weight: 500;
   font-size: 0.9rem;
   transition: color 0.2s ease;
