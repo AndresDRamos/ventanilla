@@ -748,7 +748,7 @@ Option 2: Install and provide the "ws" package:
   font-weight: 600;
   color: var(--color-text);
   margin-bottom: 0.5rem;
-  
+
   @media (max-width: 768px) {
     font-size: 0.8rem;
     margin-bottom: 0.4rem;
@@ -759,11 +759,11 @@ Option 2: Install and provide the "ws" package:
   gap: 0.8rem;
 
   @media (max-width: 768px) {
-    grid-template-columns: repeat(5, 1fr);
+    grid-template-columns: repeat(5, fr);
     gap: 0.5rem;
   }
 
-  @media (max-width: 480px) {
+  @media (max-width: 400px) {
     grid-template-columns: 1fr;
   }
 `,Ek=_.div`
