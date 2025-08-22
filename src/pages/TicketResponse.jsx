@@ -215,7 +215,6 @@ const TicketResponse = () => {
     <Container>
       <TicketCard>
         <Header>
-          <HeaderIcon>🎫</HeaderIcon>
           <HeaderContent>
             <TicketNumber>Ticket #{ticket.tickets.idTicket}</TicketNumber>
           </HeaderContent>
@@ -330,14 +329,6 @@ const Header = styled.div`
   @media (max-width: 768px) {
     padding: 12px 15px;
     gap: 10px;
-  }
-`;
-
-const HeaderIcon = styled.div`
-  font-size: 36px;
-  
-  @media (max-width: 768px) {
-    font-size: 28px;
   }
 `;
 
