@@ -108,7 +108,8 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
     const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario);
     
     // 2. Construir enlace directo
-    const baseUrl = import.meta.env.VITE_APP_BASE_URL || 'http://localhost:5173';
+    const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
+                   (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
     const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
 
     // 3. Llamar a Edge Function para enviar email

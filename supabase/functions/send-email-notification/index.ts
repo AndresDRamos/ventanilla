@@ -34,6 +34,32 @@ serve(async (req) => {
       throw new Error('Usuario sin correo registrado')
     }
 
+    // Obtener fecha de creación del ticket desde seguimientos
+    const supabase = createClient(
+      Deno.env.get('SUPABASE_URL') ?? '',
+      Deno.env.get('SUPABASE_ANON_KEY') ?? ''
+    )
+
+    const { data: fechaCreacionData, error: fechaError } = await supabase
+      .from('seguimientos')
+      .select('fecha')
+      .eq('idTicket', ticketData.idTicket)
+      .eq('idEstado', 1)
+      .order('fecha', { ascending: true })
+      .limit(1)
+      .single()
+
+    let fechaCreacion = 'Fecha no disponible'
+    if (fechaCreacionData && !fechaError) {
+      fechaCreacion = new Date(fechaCreacionData.fecha).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'long', 
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      })
+    }
+
     // Template del email
     const emailHTML = `
       <!DOCTYPE html>
@@ -78,13 +104,7 @@ serve(async (req) => {
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; font-weight: bold; color: #374151;">Fecha:</td>
-                  <td style="padding: 8px 0; color: #1f2937;">${new Date(ticketData.fechaCreacion).toLocaleDateString('es-MX', {
-                    year: 'numeric',
-                    month: 'long',
-                    day: 'numeric',
-                    hour: '2-digit',
-                    minute: '2-digit'
-                  })}</td>
+                  <td style="padding: 8px 0; color: #1f2937;">${fechaCreacion}</td>
                 </tr>
               </table>
             </div>

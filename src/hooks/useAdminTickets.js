@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { supabase } from '../supabase/supabase.config.jsx';
+import { enviarNotificacionDelegacion } from '../services/notificationService.js';
 
 // Hook para obtener todos los tickets con filtros
 export const useAdminTickets = (user) => {
@@ -382,15 +383,19 @@ export const useAtenciones = (user) => {
       setLoading(true);
       
       // 0. Invalidar todos los tokens anteriores para este ticket (en caso de re-delegación)
-      const { error: invalidateTokenError } = await supabase
-        .from('ticket_tokens')
-        .update({ usado: true, fecha_uso: new Date().toISOString() })
-        .eq('id_ticket', idTicket)
-        .eq('usado', false);
+      try {
+        const { error: invalidateTokenError } = await supabase
+          .from('ticket_tokens')
+          .update({ usado: true, fecha_uso: new Date().toISOString() })
+          .eq('id_ticket', idTicket)
+          .eq('usado', false);
 
-      // No lanzar error si no hay tokens que invalidar
-      if (invalidateTokenError) {
-        console.warn('Advertencia al invalidar tokens en delegación:', invalidateTokenError);
+        if (invalidateTokenError) {
+          console.warn('Advertencia al invalidar tokens en delegación:', invalidateTokenError);
+        }
+      } catch (tokenError) {
+        console.warn('Error manejando tokens (no crítico):', tokenError);
+        // Continuar con la delegación aunque falle el manejo de tokens
       }
       
       // 2. Obtener datos completos del ticket antes de delegar
@@ -460,8 +465,6 @@ export const useAtenciones = (user) => {
 
       // 7. Enviar notificación por email (si está configurado)
       try {
-        const { enviarNotificacionDelegacion } = await import('../services/notificationService.js');
-        
         // Enviar notificación completa (token + email)
         const notificationResult = await enviarNotificacionDelegacion(ticketCompleto, usuarioDestino);
         
@@ -543,19 +546,23 @@ export const useAtenciones = (user) => {
     
     setLoading(true);
     try {
-      // 1. Invalidar TODOS los tokens anteriores para este ticket
-      const { error: invalidateTokenError } = await supabase
-        .from('ticket_tokens')
-        .update({ usado: true, fecha_uso: new Date().toISOString() })
-        .eq('id_ticket', idTicket)
-        .eq('usado', false);
+      // 0. Invalidar todos los tokens anteriores para este ticket (en caso de re-asignación)
+      try {
+        const { error: invalidateTokenError } = await supabase
+          .from('ticket_tokens')
+          .update({ usado: true, fecha_uso: new Date().toISOString() })
+          .eq('id_ticket', idTicket)
+          .eq('usado', false);
 
-      // No lanzar error si no hay tokens que invalidar
-      if (invalidateTokenError) {
-        console.warn('Advertencia al invalidar tokens anteriores:', invalidateTokenError);
+        if (invalidateTokenError) {
+          console.warn('Advertencia al invalidar tokens en reasignación:', invalidateTokenError);
+        }
+      } catch (tokenError) {
+        console.warn('Error manejando tokens en reasignación (no crítico):', tokenError);
+        // Continuar con la reasignación aunque falle el manejo de tokens
       }
 
-      // 2. Crear nuevo seguimiento con idEstado = 2 (delegado)
+      // 1. Crear nuevo seguimiento con idEstado = 2 (delegado)
       const { error: seguimientoError } = await supabase
         .from('seguimientos')
         .insert({
@@ -566,7 +573,7 @@ export const useAtenciones = (user) => {
 
       if (seguimientoError) throw seguimientoError;
       
-      // 3. Desactivar delegación anterior
+      // 2. Desactivar delegación anterior
       const { error: desactivarError } = await supabase
         .from('delegaciones')
         .update({ bActivo: false })
@@ -575,7 +582,7 @@ export const useAtenciones = (user) => {
 
       if (desactivarError) throw desactivarError;
       
-      // 4. Crear nueva delegación activa
+      // 3. Crear nueva delegación activa
       const { error: delegacionError } = await supabase
         .from('delegaciones')
         .insert({
@@ -586,7 +593,7 @@ export const useAtenciones = (user) => {
 
       if (delegacionError) throw delegacionError;
 
-      // 5. Enviar notificación al nuevo usuario (solo si tiene idRol = 3)
+      // 4. Enviar notificación al nuevo usuario (solo si tiene idRol = 3)
       try {
         // Obtener datos del nuevo usuario y del ticket completo
         const { data: nuevoUsuario, error: userError } = await supabase
@@ -610,9 +617,6 @@ export const useAtenciones = (user) => {
             .single();
 
           if (!ticketError && ticketCompleto) {
-            // Importar dinámicamente el servicio de notificaciones
-            const { enviarNotificacionDelegacion } = await import('../services/notificationService.js');
-            
             const notificationResult = await enviarNotificacionDelegacion(ticketCompleto, nuevoUsuario);
             
             if (!notificationResult.success) {
