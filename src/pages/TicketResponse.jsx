@@ -18,6 +18,12 @@ const TicketResponse = () => {
   // Cargar ticket usando el token
   useEffect(() => {
     const loadTicket = async () => {
+      if (!token) {
+        setError('Token no encontrado en la URL');
+        setLoading(false);
+        return;
+      }
+
       try {
         setLoading(true);
         
@@ -114,7 +120,10 @@ const TicketResponse = () => {
           respuesta: response.trim()
         });
 
-      if (atencionError) throw atencionError;
+      if (atencionError) {
+        console.error('Error en atenciones:', atencionError);
+        throw new Error(`Error creando atención: ${atencionError.message}`);
+      }
 
       // 2. Crear seguimiento (ticket atendido)
       const { error: seguimientoError } = await supabase
@@ -125,7 +134,10 @@ const TicketResponse = () => {
           idEstado: 3 // Atendido
         });
 
-      if (seguimientoError) throw seguimientoError;
+      if (seguimientoError) {
+        console.error('Error en seguimientos:', seguimientoError);
+        throw new Error(`Error creando seguimiento: ${seguimientoError.message}`);
+      }
 
       // 3. Actualizar estado del ticket a "atendido"
       const { error: ticketError } = await supabase
@@ -133,15 +145,24 @@ const TicketResponse = () => {
         .update({ idEstado: 3 })
         .eq('idTicket', ticket.tickets.idTicket);
 
-      if (ticketError) throw ticketError;
+      if (ticketError) {
+        console.error('Error en tickets:', ticketError);
+        throw new Error(`Error actualizando ticket: ${ticketError.message}`);
+      }
 
-      // 4. Marcar token como usado
+      // 4. Marcar token como usado (con fecha_uso)
       const { error: tokenError } = await supabase
         .from('ticket_tokens')
-        .update({ usado: true })
+        .update({ 
+          usado: true,
+          fecha_uso: new Date().toISOString()
+        })
         .eq('token', token);
 
-      if (tokenError) throw tokenError;
+      if (tokenError) {
+        console.error('Error en ticket_tokens:', tokenError);
+        throw new Error(`Error marcando token como usado: ${tokenError.message}`);
+      }
 
       // 5. Desactivar delegación
       const { error: delegacionError } = await supabase
@@ -150,7 +171,10 @@ const TicketResponse = () => {
         .eq('idTicket', ticket.tickets.idTicket)
         .eq('idUsuario', ticket.id_usuario);
 
-      if (delegacionError) throw delegacionError;
+      if (delegacionError) {
+        console.error('Error en delegaciones:', delegacionError);
+        throw new Error(`Error desactivando delegación: ${delegacionError.message}`);
+      }
 
       setSuccess(true);
       
@@ -162,7 +186,7 @@ const TicketResponse = () => {
 
     } catch (err) {
       console.error('Error enviando respuesta:', err);
-      setError('Error enviando la respuesta: ' + err.message);
+      setError(err.message);
     } finally {
       setResponding(false);
     }
