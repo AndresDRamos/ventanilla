@@ -1,24 +1,11 @@
-import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import styled from "styled-components";
-import { useAppAuth } from "../contexts/AuthContext.jsx";
 import EmployeeAccess from "../components/EmployeeAccess.jsx";
 import AdminAccess from "../components/AdminAccess.jsx";
 import logoImage from "../resources/logo.png";
 
 const LoginPage = () => {
   const [activeTab, setActiveTab] = useState("employee"); // 'employee' por defecto
-  const { user, employeeData } = useAppAuth();
-  const navigate = useNavigate();
-
-  // Redirigir si ya está logueado
-  useEffect(() => {
-    if (user && user.type === 'admin') {
-      navigate('/admin');
-    } else if (employeeData && employeeData.type === 'employee') {
-      navigate('/employee');
-    }
-  }, [user, employeeData, navigate]);
 
   return (
     <Container>

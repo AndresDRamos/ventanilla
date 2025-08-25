@@ -1,4 +1,4 @@
-import { Routes, Route, Navigate } from "react-router-dom";
+import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAppAuth } from "./contexts/AuthContext.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
 import AdminDashboard from "./pages/AdminDashboard.jsx";
@@ -6,9 +6,10 @@ import EmployeeTicketsPage from "./pages/EmployeeTicketsPage.jsx";
 import TicketResponse from "./pages/TicketResponse.jsx";
 
 const AppContent = () => {
-  const { user, employeeData, logout, loading } = useAppAuth();
+  const { user, employeeData, initializing } = useAppAuth();
+  const location = useLocation();
 
-  if (loading) {
+  if (initializing) {
     return (
       <div style={{ 
         display: 'flex', 
@@ -27,28 +28,30 @@ const AppContent = () => {
       {/* Ruta pública para responder tickets */}
       <Route path="/ticket/:token" element={<TicketResponse />} />
       
-      {/* Rutas protegidas */}
+      {/* Ruta de login - siempre accesible */}
+      <Route path="/login" element={<LoginPage />} />
+      
+      {/* Rutas protegidas para admin */}
       <Route 
-        path="/admin" 
+        path="/admin/*" 
         element={
           user && user.type === 'admin' ? 
             <AdminDashboard /> : 
-            <Navigate to="/login" replace />
+            <Navigate to="/login" state={{ from: location }} replace />
         } 
       />
       
+      {/* Rutas protegidas para empleados */}
       <Route 
-        path="/employee" 
+        path="/employee/*" 
         element={
           employeeData && employeeData.type === 'employee' ? 
-            <EmployeeTicketsPage employeeData={employeeData} onLogout={logout} /> : 
-            <Navigate to="/login" replace />
+            <EmployeeTicketsPage employeeData={employeeData} /> : 
+            <Navigate to="/login" state={{ from: location }} replace />
         } 
       />
       
-      <Route path="/login" element={<LoginPage />} />
-      
-      {/* Rutas de redirección */}
+      {/* Ruta raíz - redirige según el tipo de usuario */}
       <Route 
         path="/" 
         element={

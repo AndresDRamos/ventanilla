@@ -5,7 +5,7 @@ const StatsSection = ({ stats, statsFilter, onStatsFilterChange }) => {
   const stateConfig = {
     sinAtender: {
       id: 1,
-      label: "Sin Atender",
+      label: "Nuevas",
       color: "var(--color-estado-sin-atender)",
       count: stats.sinAtender,
     },

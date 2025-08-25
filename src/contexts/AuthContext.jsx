@@ -4,12 +4,15 @@ import { supabase } from '../supabase/supabase.config.jsx';
 const AuthContext = createContext();
 
 export const AuthProvider = ({ children }) => {
-  const [loading, setLoading] = useState(false);
+  const [initializing, setInitializing] = useState(true); // Para la carga inicial
+  const [loading, setLoading] = useState(false); // Para operaciones de login
   const [user, setUser] = useState(null);
   const [employeeData, setEmployeeData] = useState(null);
+  const [authError, setAuthError] = useState(null); // Nuevo estado para errores persistentes
 
   // Login de administrador
   const adminLogin = async (usuario, contraseña) => {
+    setAuthError(null); // Limpiar errores previos
     try {
       setLoading(true);
       
@@ -21,7 +24,6 @@ export const AuthProvider = ({ children }) => {
         .single();
 
       if (error) {
-        console.error('Error de Supabase:', error);
         if (error.code === 'PGRST116') {
           throw new Error('Usuario o contraseña incorrectos');
         }
@@ -50,7 +52,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true, user: userData };
 
     } catch (error) {
-      console.error('Error en login:', error);
+      setAuthError(error.message); // Guardar error en el contexto
       return { success: false, error: error.message };
     } finally {
       setLoading(false);
@@ -87,7 +89,7 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   // Obtener usuario actual
-  const getCurrentUser = useCallback(() => {
+  const getCurrentUser = () => {
     try {
       const savedUser = localStorage.getItem('user');
       const savedEmployee = localStorage.getItem('employeeData');
@@ -105,13 +107,14 @@ export const AuthProvider = ({ children }) => {
         setUser(null);
         return employeeData;
       }
+      
     } catch (error) {
       console.error('Error al obtener usuario guardado:', error);
       localStorage.removeItem('user');
       localStorage.removeItem('employeeData');
     }
     return null;
-  }, []);
+  };
 
   // Actualizar datos del empleado
   const updateEmployeeData = useCallback((updates) => {
@@ -124,20 +127,29 @@ export const AuthProvider = ({ children }) => {
     return null;
   }, [employeeData]);
 
-  // Inicializar al cargar el provider
+  // Función para limpiar errores
+  const clearAuthError = useCallback(() => {
+    setAuthError(null);
+  }, []);
+
+  // Inicializar al cargar el provider SOLO UNA VEZ
   useEffect(() => {
     getCurrentUser();
-  }, [getCurrentUser]);
+    setInitializing(false); // Terminar inicialización
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const value = {
     user,
     employeeData,
     loading,
+    initializing,
+    authError,
     adminLogin,
     employeeLogin,
     logout,
     getCurrentUser,
-    updateEmployeeData
+    updateEmployeeData,
+    clearAuthError
   };
 
   return (
