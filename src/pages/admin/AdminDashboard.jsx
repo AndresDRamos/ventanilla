@@ -1,26 +1,26 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { useAppAuth } from "../contexts/AuthContext.jsx";
+import { useAppAuth } from "../../contexts/AuthContext.jsx";
 import {
   useAdminTickets,
   useTicketStats,
   useAsignaciones,
   useAtenciones,
-} from "../hooks/useAdminTickets.js";
+} from "../../hooks/useAdminTickets.js";
 import {
   usePlantas,
   useTiposSolicitud,
   usePrioridades,
-} from "../hooks/useTickets.js";
-import { useUsuariosAtencion } from "../hooks/useUsuariosAtencion.js";
-import { formatMexicanDate } from "../utils/dateUtils.js";
+} from "../../hooks/useTickets.js";
+import { useUsuariosAtencion } from "../../hooks/useUsuariosAtencion.js";
+import { formatMexicanDate } from "../../utils/dateUtils.js";
 
 // Components
-import DashboardHeader from "../components/DashboardHeader.jsx";
-import StatsSection from "../components/StatsSection.jsx";
-import FiltersSection from "../components/FiltersSection.jsx";
-import TicketsGrid from "../components/TicketsGrid.jsx";
-import TicketModal from "../components/ticket-modal/TicketModal.jsx";
+import DashboardHeader from "../../components/DashboardHeader.jsx";
+import StatsSection from "../../components/StatsSection.jsx";
+import FiltersSection from "../../components/FiltersSection.jsx";
+import TicketsGrid from "../../components/TicketsGrid.jsx";
+import TicketModal from "../../components/ticket-modal/TicketModal.jsx";
 
 const AdminDashboard = () => {
   const { user, logout } = useAppAuth();

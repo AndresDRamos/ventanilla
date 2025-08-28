@@ -82,7 +82,6 @@ export const useTiposSolicitud = () => {
         setTipos(data || []);
       } catch (err) {
         setError(err.message);
-        console.error('Error fetching tipos de solicitud:', err);
       } finally {
         setLoading(false);
       }
@@ -224,13 +223,6 @@ export const useTickets = () => {
           .single();
 
         if (!ticketCompletoError && !usuarioError && ticketCompleto && usuarioAsignado) {
-          console.log('Enviando notificación a:', {
-            usuario: usuarioAsignado.nombre,
-            correo: usuarioAsignado.correo,
-            ticketId: ticketCompleto.idTicket,
-            token: token
-          });
-
           // Enviar notificación usando el token ya creado
           const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
                          (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
@@ -262,24 +254,15 @@ export const useTickets = () => {
           };
 
           if (notificationResult.success) {
-            console.log('Notificación de ticket nuevo enviada exitosamente:', {
-              ticketId: ticketCreado.idTicket,
-              token: token,
-              emailSent: notificationResult.emailResult.success
-            });
+            // Notificación enviada exitosamente
           } else {
-            console.warn('Error enviando notificación de ticket nuevo:', notificationResult.error);
+            // Error enviando notificación
           }
         } else {
-          console.error('Error obteniendo datos para notificación:', {
-            ticketCompletoError,
-            usuarioError,
-            hasTicketCompleto: !!ticketCompleto,
-            hasUsuarioAsignado: !!usuarioAsignado
-          });
+          // Error obteniendo datos para notificación
         }
       } catch (notificationError) {
-        console.warn('Error en sistema de notificaciones (ticket creado exitosamente):', notificationError);
+        // Error en sistema de notificaciones (ticket creado exitosamente)
         // No fallar la creación del ticket por problemas de notificación
       }
 

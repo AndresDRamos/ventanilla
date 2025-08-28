@@ -65,7 +65,7 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
         .eq('idUsuario', ticket.idUsuario); // Usar idUsuario del token
 
       if (delegacionError) {
-        console.log('No se pudo desactivar delegación:', delegacionError.message);
+        // Delegación no encontrada o ya desactivada
       }
 
       setSuccess(true);
@@ -196,16 +196,12 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
         }
 
         if (data.success) {
-          console.log('Notificación enviada exitosamente:', {
-            token: nuevoToken,
-            directLink: directLink,
-            emailSent: data.success,
-          });
+          // Notificación enviada exitosamente
         } else {
-          console.warn('Error enviando notificación (reasignación completada):', data.error);
+          // Error enviando notificación (reasignación completada)
         }
       } catch (notificationError) {
-        console.warn('Error en sistema de notificaciones (reasignación completada):', notificationError);
+        // Error en sistema de notificaciones (reasignación completada)
         // No fallar la reasignación por problemas de notificación
       }
 

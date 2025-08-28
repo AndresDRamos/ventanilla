@@ -378,7 +378,7 @@ export const useAtenciones = (user) => {
 
       // No lanzamos error si no hay delegaciones, solo si hay un problema real
       if (delegacionError && !delegacionError.message?.includes("0 rows")) {
-        console.warn("Error al desactivar delegaciones:", delegacionError);
+        // Error al desactivar delegaciones
       }
 
       return { success: true, atencion: atencionData };
@@ -404,13 +404,10 @@ export const useAtenciones = (user) => {
             .eq("bActivo", true);
 
           if (invalidateTokenError) {
-            console.warn(
-              "Advertencia al invalidar tokens en delegación:",
-              invalidateTokenError
-            );
+            // Advertencia al invalidar tokens en delegación
           }
         } catch (tokenError) {
-          console.warn("Error manejando tokens (no crítico):", tokenError);
+          // Error manejando tokens (no crítico)
           // Continuar con la delegación aunque falle el manejo de tokens
         }
 
@@ -490,22 +487,12 @@ export const useAtenciones = (user) => {
           );
 
           if (notificationResult.success) {
-            console.log("Notificación enviada exitosamente:", {
-              token: notificationResult.token,
-              directLink: notificationResult.directLink,
-              emailSent: notificationResult.emailResult.success,
-            });
+            // Notificación enviada exitosamente
           } else {
-            console.warn(
-              "Error enviando notificación (delegación completada):",
-              notificationResult.error
-            );
+            // Error enviando notificación (delegación completada)
           }
         } catch (notificationError) {
-          console.warn(
-            "Error en sistema de notificaciones (delegación completada):",
-            notificationError
-          );
+          // Error en sistema de notificaciones (delegación completada)
           // No fallar la delegación por problemas de notificación
         }
 
@@ -588,16 +575,10 @@ export const useAtenciones = (user) => {
             .eq("bActivo", true);
 
           if (invalidateTokenError) {
-            console.warn(
-              "Advertencia al invalidar tokens en reasignación:",
-              invalidateTokenError
-            );
+            // Advertencia al invalidar tokens en reasignación
           }
         } catch (tokenError) {
-          console.warn(
-            "Error manejando tokens en reasignación (no crítico):",
-            tokenError
-          );
+          // Error manejando tokens en reasignación (no crítico)
           // Continuar con la reasignación aunque falle el manejo de tokens
         }
 
@@ -670,13 +651,7 @@ export const useAtenciones = (user) => {
                 );
                 // No fallar toda la operación por error en notificación
               } else {
-                console.log(
-                  "Notificación de reasignación enviada exitosamente:",
-                  {
-                    token: notificationResult.token,
-                    email: nuevoUsuario.correo,
-                  }
-                );
+                // Notificación de reasignación enviada exitosamente
               }
             }
           }

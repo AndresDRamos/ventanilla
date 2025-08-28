@@ -1,8 +1,8 @@
-import { useTicketResponse } from '../hooks/useTicketResponse';
-import { useTicketResponseActions } from '../hooks/useTicketResponseActions';
-import TicketResponseCard from '../components/ticket-response/TicketResponseCard';
-import { LoadingState, ErrorState, SuccessState } from '../components/ticket-response/TicketResponseStates';
-import { Container } from '../components/ticket-response/TicketResponse.styles';
+import { useTicketResponse } from '../../hooks/useTicketResponse';
+import { useTicketResponseActions } from '../../hooks/useTicketResponseActions';
+import TicketResponseCard from '../../components/ticket-response/TicketResponseCard';
+import { LoadingState, ErrorState, SuccessState } from '../../components/ticket-response/TicketResponseStates';
+import { Container } from '../../components/ticket-response/TicketResponse.styles';
 
 const TicketResponse = () => {
   const ticketResponseData = useTicketResponse();

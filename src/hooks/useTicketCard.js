@@ -53,7 +53,7 @@ export const useTicketCard = (ticket, mode, formatDate) => {
                 }
               }
             } catch (asignacionErr) {
-              console.warn('Error obteniendo asignación original:', asignacionErr);
+              // Error obteniendo asignación original
             }
           }
           

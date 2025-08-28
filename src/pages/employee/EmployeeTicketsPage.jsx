@@ -1,15 +1,15 @@
 import { useState, useEffect } from "react";
 import styled from "styled-components";
-import { useAppAuth } from "../contexts/AuthContext.jsx";
-import useEmployeeTickets from "../hooks/useEmployeeTickets.js";
-import { useEmpleados } from "../hooks/useEmpleados.js";
-import { useEsquemasPago } from "../hooks/useTickets.js";
-import { useAsignaciones } from "../hooks/useAdminTickets.js";
-import { useUsuariosAtencion } from "../hooks/useUsuariosAtencion.js";
-import { formatMexicanDate } from "../utils/dateUtils.js";
-import TicketCard from "../components/tickets/TicketCard.jsx";
-import EmployeeQuestionnaire from "../components/EmployeeQuestionnaire.jsx";
-import TicketModal from "../components/ticket-modal/TicketModal.jsx";
+import { useAppAuth } from "../../contexts/AuthContext.jsx";
+import useEmployeeTickets from "../../hooks/useEmployeeTickets.js";
+import { useEmpleados } from "../../hooks/useEmpleados.js";
+import { useEsquemasPago } from "../../hooks/useTickets.js";
+import { useAsignaciones } from "../../hooks/useAdminTickets.js";
+import { useUsuariosAtencion } from "../../hooks/useUsuariosAtencion.js";
+import { formatMexicanDate } from "../../utils/dateUtils.js";
+import TicketCard from "../../components/tickets/TicketCard.jsx";
+import EmployeeQuestionnaire from "../../components/EmployeeQuestionnaire.jsx";
+import TicketModal from "../../components/ticket-modal/TicketModal.jsx";
 
 const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   const { logout } = useAppAuth();
@@ -21,7 +21,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState(null);
   const [usuarioQueAtendio, setUsuarioQueAtendio] = useState(null);
-  
+
   // Estados para calificación (ahora manejados por TicketModal)
   const [loadingCalificacion, setLoadingCalificacion] = useState(false);
 
@@ -56,9 +56,6 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
           setEmpleadoCompleto(result.empleado);
         } else {
           // Si no se encuentra el empleado en la BD, usar los datos de sesión
-          console.warn(
-            "No se encontró el empleado en BD, usando datos de sesión"
-          );
           setEmpleadoCompleto({
             idEmpleado: employeeData.idEmpleado,
             codigoEmpleado: employeeData.codigoEmpleado,
@@ -114,14 +111,21 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
     setSelectedTicket(ticket);
     setShowDetailModal(true);
     setUsuarioQueAtendio(null);
-    
+
     // Para tickets atendidos o cancelados, obtener información del usuario
-    if ((ticket.idEstado === 3 || ticket.idEstado === 5) || (ticket.atenciones && ticket.atenciones.length > 0)) {
+    if (
+      ticket.idEstado === 3 ||
+      ticket.idEstado === 5 ||
+      (ticket.atenciones && ticket.atenciones.length > 0)
+    ) {
       try {
-        const usuario = await obtenerUsuarioQueAtendio(ticket.idTicket, ticket.idEstado);
+        const usuario = await obtenerUsuarioQueAtendio(
+          ticket.idTicket,
+          ticket.idEstado
+        );
         setUsuarioQueAtendio(usuario);
       } catch (error) {
-        console.error('Error obteniendo usuario que atendió/canceló:', error);
+        console.error("Error obteniendo usuario que atendió/canceló:", error);
         setUsuarioQueAtendio(null);
       }
     }
@@ -282,11 +286,12 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
         isOpen={showDetailModal}
         onClose={() => setShowDetailModal(false)}
         mode={
-          selectedTicket?.idEstado === 3 && 
-          selectedTicket?.atenciones?.[0] && 
-          (!selectedTicket.atenciones[0].calificacion || selectedTicket.atenciones[0].calificacion === 0)
+          selectedTicket?.idEstado === 3 &&
+          selectedTicket?.atenciones?.[0] &&
+          (!selectedTicket.atenciones[0].calificacion ||
+            selectedTicket.atenciones[0].calificacion === 0)
             ? "rating" // Modo especial para calificar
-            : "view"   // Modo de solo vista
+            : "view" // Modo de solo vista
         }
         onSubmit={async (data) => {
           // Manejar envío de calificación
@@ -294,20 +299,22 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
             setLoadingCalificacion(true);
             try {
               const resultado = await calificarTicket(
-                selectedTicket.idTicket, 
-                data.calificacion, 
+                selectedTicket.idTicket,
+                data.calificacion,
                 data.comentario || ""
               );
-              
+
               if (resultado.success) {
-                alert('Calificación enviada exitosamente. El ticket ha sido cerrado.');
+                alert(
+                  "Calificación enviada exitosamente. El ticket ha sido cerrado."
+                );
                 setShowDetailModal(false);
               } else {
                 alert(`Error al enviar la calificación: ${resultado.error}`);
               }
             } catch (error) {
-              console.error('Error enviando calificación:', error);
-              alert('Error al enviar la calificación. Inténtalo de nuevo.');
+              console.error("Error enviando calificación:", error);
+              alert("Error al enviar la calificación. Inténtalo de nuevo.");
             } finally {
               setLoadingCalificacion(false);
             }
@@ -315,10 +322,10 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
         }}
         loading={loadingCalificacion}
         usuarioQueAtendio={usuarioQueAtendio}
-        currentUser={{ 
-          tipo: "employee", 
+        currentUser={{
+          tipo: "employee",
           idUsuario: empleadoCompleto?.idEmpleado || employeeData?.idEmpleado,
-          nombre: empleadoCompleto?.nombre || employeeData?.empleado
+          nombre: empleadoCompleto?.nombre || employeeData?.empleado,
         }}
       />
     </Container>
@@ -453,7 +460,7 @@ const Tab = styled.button`
 
 const TicketsSection = styled.section`
   display: grid;
-  grid-template-columns: repeat(4, minmax(250px, 1fr));
+  grid-template-columns: repeat(3, minmax(250px, 1fr));
   grid-column-gap: 1rem;
   grid-row-gap: 1rem;
   padding: 1rem;

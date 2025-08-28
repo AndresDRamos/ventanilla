@@ -1,9 +1,9 @@
 import { Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { useAppAuth } from "./contexts/AuthContext.jsx";
 import LoginPage from "./pages/LoginPage.jsx";
-import AdminDashboard from "./pages/AdminDashboard.jsx";
-import EmployeeTicketsPage from "./pages/EmployeeTicketsPage.jsx";
-import TicketResponse from "./pages/TicketResponse.jsx";
+import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
+import EmployeeTicketsPage from "./pages/employee/EmployeeTicketsPage.jsx";
+import TicketResponse from "./pages/admin/TicketResponse.jsx";
 
 const AppContent = () => {
   const { user, employeeData, initializing } = useAppAuth();

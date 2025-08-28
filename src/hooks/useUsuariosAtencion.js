@@ -14,7 +14,6 @@ export const useUsuariosAtencion = () => {
 
       // Validación del idTicket
       if (!idTicket || isNaN(parseInt(idTicket))) {
-        console.warn('ID de ticket inválido:', idTicket);
         return null;
       }
 

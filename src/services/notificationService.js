@@ -4,7 +4,17 @@
 import { supabase } from '../supabase/supabase.config.jsx';
 
 /**
- * Genera un token único para acceso directo al ticket
+ * Genera         notificationType: 'nuevo' // Para distinguir tipos de notificación
+      }
+    });
+
+    if (error) {
+      console.error('Error invocando Edge Function:', error);
+      throw error;
+    }
+
+    return {
+      success: data.success,o para acceso directo al ticket
  * @param {number} idTicket - ID del ticket
  * @param {number} idUsuario - ID del usuario destinatario
  * @returns {Promise<string>} Token generado
@@ -100,11 +110,6 @@ export const deactivateToken = async (token) => {
  */
 export const enviarNotificacionDelegacion = async (ticket, usuario) => {
   try {
-    console.log('Iniciando notificación por email para:', { 
-      ticketId: ticket.idTicket, 
-      usuario: usuario.nombre 
-    });
-
     // 1. Generar token de acceso directo
     const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario);
     
@@ -127,8 +132,6 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
       console.error('Error invocando Edge Function:', error);
       throw error;
     }
-
-    console.log('Edge Function response:', data);
 
     return {
       success: data.success,
@@ -158,28 +161,15 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
  */
 export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
   try {
-    console.log('Iniciando notificación de ticket nuevo para:', { 
-      ticketId: ticket.idTicket, 
-      usuario: usuario.nombre 
-    });
-
     // 1. Generar token de acceso directo
-    console.log('Generando token para:', { idTicket: ticket.idTicket, idUsuario: usuario.idUsuario });
     const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario);
-    console.log('Token generado:', token);
     
     // 2. Construir enlace directo
     const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
                    (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
     const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
-    console.log('Enlace directo:', directLink);
 
     // 3. Llamar a Edge Function para enviar email
-    console.log('Invocando Edge Function con:', {
-      ticketId: ticket.idTicket,
-      usuarioCorreo: usuario.correo,
-      notificationType: 'nuevo'
-    });
 
     const { data, error } = await supabase.functions.invoke('send-email-notification', {
       body: {
@@ -194,8 +184,6 @@ export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
       console.error('Error invocando Edge Function:', error);
       throw error;
     }
-
-    console.log('Edge Function response:', data);
 
     return {
       success: data.success,
