@@ -53,10 +53,12 @@ const TicketModal = ({
     }
   };
 
-  // Determinar si debe mostrar respuesta o acciones
+  // Determinar si debe mostrar respuesta
   const shouldShowResponse = mode === "response" || 
-    (mode === "view" && (ticket.idEstado === 3 || ticket.idEstado === 4 || ticket.idEstado === 5));
+    (mode === "view" && (ticket.idEstado === 3 || ticket.idEstado === 4 || ticket.idEstado === 5)) ||
+    (ticket.atenciones && ticket.atenciones.length > 0 && ticket.atenciones[0].respuesta);
   
+  // Determinar si debe mostrar rating (independiente de la respuesta)
   const shouldShowRating = mode === "rating" || 
     (mode === "view" && ticket.idEstado === 3 && 
      currentUser?.tipo === "employee" &&
@@ -80,19 +82,28 @@ const TicketModal = ({
             currentUser={currentUser}
           />
           
-          {shouldShowResponse ? (
+          {shouldShowResponse && (
             <TicketModalResponse 
               ticket={ticket}
               usuarioQueAtendio={usuarioQueAtendio}
             />
-          ) : (
+          )}
+          
+          {shouldShowRating ? (
             <TicketModalActions
               ticket={ticket}
-              mode={shouldShowRating ? "rating" : mode}
+              mode="rating"
               currentUser={currentUser}
               modalState={modalState}
             />
-          )}
+          ) : !shouldShowResponse ? (
+            <TicketModalActions
+              ticket={ticket}
+              mode={mode}
+              currentUser={currentUser}
+              modalState={modalState}
+            />
+          ) : null}
         </ModalBody>
 
         <TicketModalFooter

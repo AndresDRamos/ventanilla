@@ -130,6 +130,22 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
 
     if (error) {
       console.error('Error invocando Edge Function:', error);
+      
+      // Si es error 400/403 de Resend, devolver resultado parcial en lugar de fallar
+      if (error.message?.includes('Bad Request') || error.message?.includes('403')) {
+        console.warn('⚠️ Email no enviado debido a limitaciones de Resend');
+        return {
+          success: false,
+          token: token,
+          directLink: directLink,
+          error: 'Email service temporarily unavailable',
+          emailResult: {
+            success: false,
+            error: 'Resend domain verification required'
+          }
+        };
+      }
+      
       throw error;
     }
 
@@ -182,6 +198,22 @@ export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
 
     if (error) {
       console.error('Error invocando Edge Function:', error);
+      
+      // Si es error 400/403 de Resend, devolver resultado parcial en lugar de fallar
+      if (error.message?.includes('Bad Request') || error.message?.includes('403')) {
+        console.warn('⚠️ Email no enviado debido a limitaciones de Resend');
+        return {
+          success: false,
+          token: token,
+          directLink: directLink,
+          error: 'Email service temporarily unavailable',
+          emailResult: {
+            success: false,
+            error: 'Resend domain verification required'
+          }
+        };
+      }
+      
       throw error;
     }
 

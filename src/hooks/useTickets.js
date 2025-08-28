@@ -228,6 +228,23 @@ export const useTickets = () => {
                          (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
           const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
 
+          // Log para diagnosticar el error 400
+          console.log('📧 Datos que se envían a Edge Function:', {
+            ticketData: {
+              idTicket: ticketCompleto?.idTicket,
+              titulo: ticketCompleto?.titulo,
+              empleado: ticketCompleto?.empleados?.nombre,
+              tipoSolicitud: ticketCompleto?.tiposSolicitud?.tipoSolicitud
+            },
+            usuario: {
+              idUsuario: usuarioAsignado?.idUsuario,
+              nombre: usuarioAsignado?.nombre,
+              correo: usuarioAsignado?.correo
+            },
+            directLink: directLink,
+            notificationType: 'nuevo'
+          });
+
           const { data, error } = await supabase.functions.invoke('send-email-notification', {
             body: {
               ticketData: ticketCompleto,
@@ -238,8 +255,21 @@ export const useTickets = () => {
           });
 
           if (error) {
-            console.error('Error invocando Edge Function:', error);
-            throw error;
+            console.error('❌ Error completo de Edge Function:', {
+              name: error.name,
+              message: error.message,
+              context: error.context,
+              details: error.details,
+              status: error.status
+            });
+            
+            // Si es error 400/403 de Resend, no fallar la creación del ticket
+            if (error.message?.includes('Bad Request') || error.message?.includes('403')) {
+              console.warn('⚠️ Email no enviado debido a limitaciones de Resend (ticket creado exitosamente)');
+              // Continuar sin fallar
+            } else {
+              throw error;
+            }
           }
 
           const notificationResult = {
