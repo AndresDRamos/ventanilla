@@ -125,7 +125,7 @@ const Container = styled.div`
 `;
 
 const FiltersHeader = styled.div`
-  padding: 1rem;
+  padding: 0.5rem 1rem;
   display: flex;
   justify-content: space-between;
   align-items: center;

@@ -23,9 +23,10 @@ export const generateTicketToken = async (idTicket, idUsuario) => {
       .from('ticket_tokens')
       .insert({
         token,
-        id_ticket: idTicket,
-        id_usuario: idUsuario,
-        fecha_expiracion: fechaExpiracion.toISOString()
+        idTicket: idTicket,
+        idUsuario: idUsuario,
+        fecha_expiracion: fechaExpiracion.toISOString(),
+        bActivo: true
       });
 
     if (error) throw error;
@@ -58,7 +59,7 @@ export const validateTicketToken = async (token) => {
         usuarios (nombre, correo)
       `)
       .eq('token', token)
-      .eq('usado', false)
+      .eq('bActivo', true)
       .gt('fecha_expiracion', new Date().toISOString())
       .single();
 
@@ -74,19 +75,19 @@ export const validateTicketToken = async (token) => {
 };
 
 /**
- * Marca un token como usado
- * @param {string} token - Token a marcar como usado
+ * Desactiva un token
+ * @param {string} token - Token a desactivar
  */
-export const markTokenAsUsed = async (token) => {
+export const deactivateToken = async (token) => {
   try {
     const { error } = await supabase
       .from('ticket_tokens')
-      .update({ usado: true })
+      .update({ bActivo: false })
       .eq('token', token);
 
     if (error) throw error;
   } catch (error) {
-    console.error('Error marcando token como usado:', error);
+    console.error('Error desactivando token:', error);
     throw error;
   }
 };
@@ -117,7 +118,8 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
       body: {
         ticketData: ticket,
         usuario: usuario,
-        directLink: directLink
+        directLink: directLink,
+        notificationType: 'delegacion' // Para distinguir tipos de notificación
       }
     });
 
@@ -148,9 +150,77 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
   }
 };
 
+/**
+ * Envía notificación por email cuando se crea un ticket nuevo
+ * @param {Object} ticket - Información del ticket
+ * @param {Object} usuario - Usuario administrador asignado
+ * @returns {Promise<Object>} Resultado del envío
+ */
+export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
+  try {
+    console.log('Iniciando notificación de ticket nuevo para:', { 
+      ticketId: ticket.idTicket, 
+      usuario: usuario.nombre 
+    });
+
+    // 1. Generar token de acceso directo
+    console.log('Generando token para:', { idTicket: ticket.idTicket, idUsuario: usuario.idUsuario });
+    const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario);
+    console.log('Token generado:', token);
+    
+    // 2. Construir enlace directo
+    const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
+                   (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
+    const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
+    console.log('Enlace directo:', directLink);
+
+    // 3. Llamar a Edge Function para enviar email
+    console.log('Invocando Edge Function con:', {
+      ticketId: ticket.idTicket,
+      usuarioCorreo: usuario.correo,
+      notificationType: 'nuevo'
+    });
+
+    const { data, error } = await supabase.functions.invoke('send-email-notification', {
+      body: {
+        ticketData: ticket,
+        usuario: usuario,
+        directLink: directLink,
+        notificationType: 'nuevo' // Nuevo tipo para tickets recién creados
+      }
+    });
+
+    if (error) {
+      console.error('Error invocando Edge Function:', error);
+      throw error;
+    }
+
+    console.log('Edge Function response:', data);
+
+    return {
+      success: data.success,
+      token: token,
+      directLink: directLink,
+      emailResult: {
+        success: data.success,
+        messageId: data.messageId,
+        to: data.to
+      }
+    };
+
+  } catch (error) {
+    console.error('Error enviando notificación de ticket nuevo:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
 export default {
   generateTicketToken,
   validateTicketToken,
-  markTokenAsUsed,
-  enviarNotificacionDelegacion
+  deactivateToken,
+  enviarNotificacionDelegacion,
+  enviarNotificacionTicketNuevo
 };

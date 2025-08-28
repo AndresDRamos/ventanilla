@@ -41,7 +41,10 @@ export const useEmployeeTickets = (idEmpleado) => {
               idAtencion,
               respuesta,
               calificacion,
-              comentario
+              comentario,
+              usuarios (
+                nombre
+              )
             ),
             seguimientos (
               idSeguimiento,
@@ -51,14 +54,6 @@ export const useEmployeeTickets = (idEmpleado) => {
                 idEstado,
                 estado
               ),
-              usuarios (
-                idUsuario,
-                nombre
-              )
-            ),
-            delegaciones (
-              idDelegacion,
-              bActivo,
               usuarios (
                 idUsuario,
                 nombre
@@ -117,7 +112,10 @@ export const useEmployeeTickets = (idEmpleado) => {
             idAtencion,
             respuesta,
             calificacion,
-            comentario
+            comentario,
+            usuarios (
+              nombre
+            )
           ),
           seguimientos (
             idSeguimiento,
@@ -127,14 +125,6 @@ export const useEmployeeTickets = (idEmpleado) => {
               idEstado,
               estado
             ),
-            usuarios (
-              idUsuario,
-              nombre
-            )
-          ),
-          delegaciones (
-            idDelegacion,
-            bActivo,
             usuarios (
               idUsuario,
               nombre

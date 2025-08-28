@@ -7,48 +7,76 @@ export const useUsuariosAtencion = () => {
   const [error, setError] = useState(null);
 
   // Función para obtener el usuario que atendió un ticket específico
-  const obtenerUsuarioQueAtendio = useCallback(async (idTicket, idEstado = null) => {
+  const obtenerUsuarioQueAtendio = useCallback(async (idTicket, _idEstado = null) => {
     try {
       setLoading(true);
       setError(null);
 
-      // Determinar qué estado buscar basado en el estado del ticket
-      let estadoBuscado = 3; // Por defecto buscar "Atendido"
-      if (idEstado === 5) {
-        estadoBuscado = 5; // Para tickets cancelados, buscar "Cancelado"
-      } else if (idEstado === 3) {
-        estadoBuscado = 3; // Para tickets atendidos, buscar "Atendido"
+      // Validación del idTicket
+      if (!idTicket || isNaN(parseInt(idTicket))) {
+        console.warn('ID de ticket inválido:', idTicket);
+        return null;
       }
 
-      // Buscar el seguimiento más reciente del estado correspondiente
-      const { data: seguimiento, error: seguimientoError } = await supabase
-        .from('seguimientos')
+      // PRIMERA OPCIÓN: Buscar el idUsuario en la tabla atenciones
+      const { data: atencion, error: atencionError } = await supabase
+        .from('atenciones')
         .select(`
           idUsuario,
-          fecha,
           usuarios (
             nombre
           )
         `)
-        .eq('idTicket', idTicket)
-        .eq('idEstado', estadoBuscado)
-        .order('fecha', { ascending: false })
+        .eq('idTicket', parseInt(idTicket))
         .limit(1)
-        .single();
+        .maybeSingle(); // Cambiar a maybeSingle() para tickets sin atenciones
 
-      if (seguimientoError) {
-        console.error('Error obteniendo seguimiento:', seguimientoError);
-        return null;
+      if (!atencionError && atencion?.usuarios?.nombre) {
+        return {
+          nombre: atencion.usuarios.nombre,
+          fecha: null // Las atenciones no tienen fecha directa
+        };
       }
 
-      if (!seguimiento || !seguimiento.usuarios) {
-        return null;
+      // SEGUNDA OPCIÓN: Fallback al usuario original del ticket 
+      // Primero obtenemos el ticket para saber el idEmpleado y idTipoSolicitud
+      const { data: ticketInfo, error: ticketError } = await supabase
+        .from('tickets')
+        .select('idEmpleado, idTipoSolicitud')
+        .eq('idTicket', idTicket)
+        .maybeSingle();
+
+      if (!ticketError && ticketInfo) {
+        // Luego obtenemos el idPlanta del empleado
+        const { data: empleado, error: empleadoError } = await supabase
+          .from('empleados')
+          .select('idPlanta')
+          .eq('idEmpleado', ticketInfo.idEmpleado)
+          .maybeSingle();
+
+        if (!empleadoError && empleado) {
+          // Finalmente obtenemos el usuario asignado desde asignaciones
+          const { data: asignacion, error: asignacionError } = await supabase
+            .from('asignaciones')
+            .select(`
+              usuarios (
+                nombre
+              )
+            `)
+            .eq('idTipoSolicitud', ticketInfo.idTipoSolicitud)
+            .eq('idPlanta', empleado.idPlanta)
+            .maybeSingle();
+
+          if (!asignacionError && asignacion?.usuarios?.nombre) {
+            return {
+              nombre: asignacion.usuarios.nombre,
+              fecha: null
+            };
+          }
+        }
       }
 
-      return {
-        nombre: seguimiento.usuarios.nombre,
-        fecha: seguimiento.fecha
-      };
+      return null;
 
     } catch (err) {
       console.error('Error en obtenerUsuarioQueAtendio:', err);
@@ -67,39 +95,74 @@ export const useUsuariosAtencion = () => {
       setLoading(true);
       setError(null);
 
-      // Obtener todos los seguimientos de atención para los tickets solicitados
-      const { data: seguimientos, error: seguimientosError } = await supabase
-        .from('seguimientos')
+      // PRIMERA OPCIÓN: Obtener usuarios desde atenciones
+      const { data: atenciones, error: atencionesError } = await supabase
+        .from('atenciones')
         .select(`
           idTicket,
           idUsuario,
-          fecha,
           usuarios (
-            nombre,
-            apellidos
+            nombre
           )
         `)
-        .in('idTicket', idsTickets)
-        .eq('idEstado', 3)  // Estado "Atendido"
-        .order('fecha', { ascending: false });
+        .in('idTicket', idsTickets);
 
-      if (seguimientosError) {
-        console.error('Error obteniendo seguimientos:', seguimientosError);
-        return {};
-      }
-
-      // Crear mapa de idTicket -> información del usuario
       const usuariosPorTicket = {};
       
-      seguimientos.forEach(seg => {
-        // Solo tomar el más reciente para cada ticket (ya están ordenados por fecha desc)
-        if (!usuariosPorTicket[seg.idTicket] && seg.usuarios) {
-          usuariosPorTicket[seg.idTicket] = {
-            nombre: `${seg.usuarios.nombre} ${seg.usuarios.apellidos}`.trim(),
-            fecha: seg.fecha
-          };
+      if (!atencionesError && atenciones) {
+        atenciones.forEach(atencion => {
+          if (atencion.usuarios?.nombre) {
+            usuariosPorTicket[atencion.idTicket] = {
+              nombre: atencion.usuarios.nombre,
+              fecha: null
+            };
+          }
+        });
+      }
+
+      // SEGUNDA OPCIÓN: Para tickets sin atención, usar usuario original
+      const ticketsSinAtencion = idsTickets.filter(id => !usuariosPorTicket[id]);
+      
+      if (ticketsSinAtencion.length > 0) {
+        // Obtener información básica de los tickets
+        const { data: tickets, error: ticketsError } = await supabase
+          .from('tickets')
+          .select('idTicket, idEmpleado, idTipoSolicitud')
+          .in('idTicket', ticketsSinAtencion);
+
+        if (!ticketsError && tickets) {
+          // Para cada ticket, obtener el usuario asignado
+          for (const ticket of tickets) {
+            // Obtener idPlanta del empleado
+            const { data: empleado, error: empleadoError } = await supabase
+              .from('empleados')
+              .select('idPlanta')
+              .eq('idEmpleado', ticket.idEmpleado)
+              .maybeSingle();
+
+            if (!empleadoError && empleado) {
+              // Obtener usuario asignado desde asignaciones
+              const { data: asignacion, error: asignacionError } = await supabase
+                .from('asignaciones')
+                .select(`
+                  usuarios (
+                    nombre
+                  )
+                `)
+                .eq('idTipoSolicitud', ticket.idTipoSolicitud)
+                .eq('idPlanta', empleado.idPlanta)
+                .maybeSingle();
+
+              if (!asignacionError && asignacion?.usuarios?.nombre) {
+                usuariosPorTicket[ticket.idTicket] = {
+                  nombre: asignacion.usuarios.nombre,
+                  fecha: null
+                };
+              }
+            }
+          }
         }
-      });
+      }
 
       return usuariosPorTicket;
 

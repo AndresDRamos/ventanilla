@@ -65,7 +65,10 @@ export const useAdminTickets = (user) => {
             idAtencion,
             respuesta,
             calificacion,
-            comentario
+            comentario,
+            usuarios (
+              nombre
+            )
           ),
           seguimientos (
             idSeguimiento,
@@ -75,14 +78,6 @@ export const useAdminTickets = (user) => {
               idEstado,
               estado
             ),
-            usuarios (
-              idUsuario,
-              nombre
-            )
-          ),
-          delegaciones (
-            idDelegacion,
-            bActivo,
             usuarios (
               idUsuario,
               nombre
@@ -353,11 +348,12 @@ export const useAtenciones = (user) => {
 
       if (seguimientoError) throw seguimientoError;
 
-      // 2. Crear atención solo con respuesta e idTicket (sin idUsuario)
+      // 2. Crear atención con respuesta, idTicket e idUsuario
       const { data: atencionData, error: atencionError } = await supabase
         .from("atenciones")
         .insert({
           idTicket,
+          idUsuario, // Agregar el idUsuario que responde
           respuesta,
         })
         .select()
@@ -403,9 +399,9 @@ export const useAtenciones = (user) => {
         try {
           const { error: invalidateTokenError } = await supabase
             .from("ticket_tokens")
-            .update({ usado: true, fecha_uso: new Date().toISOString() })
-            .eq("id_ticket", idTicket)
-            .eq("usado", false);
+            .update({ bActivo: false, fecha_uso: new Date().toISOString() })
+            .eq("idTicket", idTicket)
+            .eq("bActivo", true);
 
           if (invalidateTokenError) {
             console.warn(
@@ -587,9 +583,9 @@ export const useAtenciones = (user) => {
         try {
           const { error: invalidateTokenError } = await supabase
             .from("ticket_tokens")
-            .update({ usado: true, fecha_uso: new Date().toISOString() })
-            .eq("id_ticket", idTicket)
-            .eq("usado", false);
+            .update({ bActivo: false, fecha_uso: new Date().toISOString() })
+            .eq("idTicket", idTicket)
+            .eq("bActivo", true);
 
           if (invalidateTokenError) {
             console.warn(

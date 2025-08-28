@@ -88,6 +88,36 @@ export const AuthProvider = ({ children }) => {
     localStorage.removeItem('employeeData');
   }, []);
 
+  // Auto-login para admin (usado desde enlaces de tickets)
+  const adminAutoLogin = useCallback(async (userData) => {
+    try {
+      setLoading(true);
+
+      const adminUser = {
+        id: userData.idUsuario,
+        nombre: userData.nombre,
+        usuario: userData.usuario || userData.correo, // Usar correo como usuario si no tiene campo usuario
+        correo: userData.correo,
+        idRol: userData.idRol,
+        rol: 'Administrador',
+        type: 'admin'
+      };
+
+      setUser(adminUser);
+      setEmployeeData(null);
+      localStorage.setItem('user', JSON.stringify(adminUser));
+      localStorage.removeItem('employeeData');
+      
+      return { success: true, user: adminUser };
+    } catch (error) {
+      console.error('Error en auto-login:', error);
+      setAuthError('Error en autenticación automática');
+      throw error;
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   // Obtener usuario actual
   const getCurrentUser = () => {
     try {
@@ -145,6 +175,7 @@ export const AuthProvider = ({ children }) => {
     initializing,
     authError,
     adminLogin,
+    adminAutoLogin,
     employeeLogin,
     logout,
     getCurrentUser,

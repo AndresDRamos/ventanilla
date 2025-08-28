@@ -182,6 +182,107 @@ export const useTickets = () => {
 
       if (seguimientoError) throw seguimientoError;
 
+      // Crear token de acceso para el usuario asignado
+      const token = crypto.randomUUID();
+      const fechaExpiracion = new Date();
+      fechaExpiracion.setDate(fechaExpiracion.getDate() + 7);
+
+      const { error: tokenError } = await supabase
+        .from('ticket_tokens')
+        .insert({
+          token,
+          idTicket: ticketCreado.idTicket,
+          idUsuario: asignacionData.idUsuario,
+          fecha_expiracion: fechaExpiracion.toISOString(),
+          bActivo: true
+        });
+
+      if (tokenError) throw tokenError;
+
+      // Enviar notificación al usuario asignado
+      try {
+        // Obtener datos completos del ticket recién creado
+        const { data: ticketCompleto, error: ticketCompletoError } = await supabase
+          .from('tickets')
+          .select(`
+            *,
+            empleados (
+              nombre,
+              plantas (planta)
+            ),
+            tiposSolicitud (tipoSolicitud),
+            prioridades (prioridad)
+          `)
+          .eq('idTicket', ticketCreado.idTicket)
+          .single();
+
+        // Obtener datos del usuario asignado
+        const { data: usuarioAsignado, error: usuarioError } = await supabase
+          .from('usuarios')
+          .select('idUsuario, nombre, correo')
+          .eq('idUsuario', asignacionData.idUsuario)
+          .single();
+
+        if (!ticketCompletoError && !usuarioError && ticketCompleto && usuarioAsignado) {
+          console.log('Enviando notificación a:', {
+            usuario: usuarioAsignado.nombre,
+            correo: usuarioAsignado.correo,
+            ticketId: ticketCompleto.idTicket,
+            token: token
+          });
+
+          // Enviar notificación usando el token ya creado
+          const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
+                         (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
+          const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
+
+          const { data, error } = await supabase.functions.invoke('send-email-notification', {
+            body: {
+              ticketData: ticketCompleto,
+              usuario: usuarioAsignado,
+              directLink: directLink,
+              notificationType: 'nuevo' // Nuevo tipo para tickets recién creados
+            }
+          });
+
+          if (error) {
+            console.error('Error invocando Edge Function:', error);
+            throw error;
+          }
+
+          const notificationResult = {
+            success: data.success,
+            token: token,
+            directLink: directLink,
+            emailResult: {
+              success: data.success,
+              messageId: data.messageId,
+              to: data.to
+            }
+          };
+
+          if (notificationResult.success) {
+            console.log('Notificación de ticket nuevo enviada exitosamente:', {
+              ticketId: ticketCreado.idTicket,
+              token: token,
+              emailSent: notificationResult.emailResult.success
+            });
+          } else {
+            console.warn('Error enviando notificación de ticket nuevo:', notificationResult.error);
+          }
+        } else {
+          console.error('Error obteniendo datos para notificación:', {
+            ticketCompletoError,
+            usuarioError,
+            hasTicketCompleto: !!ticketCompleto,
+            hasUsuarioAsignado: !!usuarioAsignado
+          });
+        }
+      } catch (notificationError) {
+        console.warn('Error en sistema de notificaciones (ticket creado exitosamente):', notificationError);
+        // No fallar la creación del ticket por problemas de notificación
+      }
+
       return { success: true, ticket: ticketCreado };
     } catch (err) {
       setError(err.message);

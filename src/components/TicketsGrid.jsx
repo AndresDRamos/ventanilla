@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import TicketCard from "./TicketCard.jsx";
+import TicketCard from "./tickets/TicketCard.jsx";
 
 const TicketsGrid = ({
   tickets,
@@ -72,10 +72,10 @@ const Container = styled.div`
 
 const GridContainer = styled.div`
   display: grid;
-  grid-template-columns: repeat(4, minmax(300px, 1fr));
+  grid-template-columns: repeat(3, minmax(300px, 1fr));
   grid-column-gap: 1rem;
   grid-row-gap: 1rem;
-  padding: 1rem;
+  padding: 0.5rem;
   align-content: start;
   min-height: 100%;
 

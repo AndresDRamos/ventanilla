@@ -20,7 +20,7 @@ import DashboardHeader from "../components/DashboardHeader.jsx";
 import StatsSection from "../components/StatsSection.jsx";
 import FiltersSection from "../components/FiltersSection.jsx";
 import TicketsGrid from "../components/TicketsGrid.jsx";
-import TicketModal from "../components/TicketModal.jsx";
+import TicketModal from "../components/ticket-modal/TicketModal.jsx";
 
 const AdminDashboard = () => {
   const { user, logout } = useAppAuth();
@@ -334,6 +334,7 @@ const Container = styled.div`
   margin: 0 auto;
   padding: 1rem;
   background-color: #f8f9fa;
+  max-width: 1200px;
 
   @media (max-width: 768px) {
     padding: 0.5rem;
