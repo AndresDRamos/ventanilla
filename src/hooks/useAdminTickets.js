@@ -16,8 +16,24 @@ export const useAdminTickets = (user, asignaciones = []) => {
     async (filters = {}) => {
       if (!user) return;
 
+      // Para usuarios idRol = 2, esperar a que las asignaciones estén disponibles
+      // Pero con timeout - si no cargan en tiempo razonable, continuar sin filtrar
+      if (user.idRol === 2 && (!asignaciones || asignaciones.length === 0)) {
+        // Si han pasado más de 15 segundos desde el montaje, proceder sin asignaciones
+        const timeoutMs = 15000;
+        const startTime = hasInitialFetch.current ? Date.now() - timeoutMs : Date.now();
+        
+        if (Date.now() - startTime < timeoutMs) {
+          console.log('⏳ Esperando asignaciones para usuario idRol = 2...');
+          return; // No hacer fetch hasta que las asignaciones estén disponibles
+        } else {
+          console.warn('⚠️ Timeout esperando asignaciones - procediendo sin filtrar');
+        }
+      }
+
       try {
         setLoading(true);
+        console.log('🔄 Iniciando fetch de tickets para usuario:', user.idUsuario, 'idRol:', user.idRol);
 
         // Función inline para crear seguimiento inicial
         const createInitialSeguimientoInline = async (ticket) => {
@@ -215,7 +231,15 @@ export const useAdminTickets = (user, asignaciones = []) => {
                 return matches;
               });
             } else {
-              sortedData = [];
+              // Si no hay asignaciones específicas para el usuario, 
+              // verificar si es por timeout/error o realmente no tiene asignaciones
+              if (asignaciones.length === 0) {
+                console.warn('⚠️ Sin asignaciones disponibles - mostrando todos los tickets');
+                // En caso de error/timeout, mostrar todos los tickets para no bloquear al usuario
+              } else {
+                // El usuario realmente no tiene asignaciones específicas
+                sortedData = [];
+              }
             }
           }
         }
@@ -252,15 +276,27 @@ export const useAdminTickets = (user, asignaciones = []) => {
 
   useEffect(() => {
     // Solo ejecutar si el usuario cambió o es la primera vez
-    if (
-      user &&
-      (currentUserId.current !== user.idUsuario || !hasInitialFetch.current)
-    ) {
+    if (user && (currentUserId.current !== user.idUsuario || !hasInitialFetch.current)) {
       currentUserId.current = user.idUsuario;
       hasInitialFetch.current = true;
-      fetchTickets();
+      
+      // Para usuarios idRol = 2, verificar que las asignaciones estén cargadas
+      if (user.idRol === 2) {
+        console.log('🔍 Usuario idRol = 2, verificando asignaciones:', asignaciones?.length);
+        if (asignaciones && asignaciones.length > 0) {
+          console.log('✅ Asignaciones disponibles, ejecutando fetch');
+          fetchTickets();
+        } else {
+          console.log('⏳ Asignaciones aún no disponibles, esperando...');
+          // No setear loading = false aquí, mantener el estado de carga
+        }
+      } else {
+        // Para otros roles, ejecutar inmediatamente
+        console.log('👤 Usuario idRol =', user.idRol, 'ejecutando fetch inmediato');
+        fetchTickets();
+      }
     }
-  }, [user, fetchTickets]);
+  }, [user, fetchTickets, asignaciones]); // Agregar asignaciones como dependencia
 
   return { tickets, loading, error, refetchTickets: fetchTickets };
 };
@@ -287,19 +323,37 @@ export const useAsignaciones = () => {
   useEffect(() => {
     const fetchAsignaciones = async () => {
       try {
-        const { data, error } = await supabase.from("asignaciones").select(`
+        console.log('🔄 Iniciando fetch de asignaciones...');
+        
+        // Timeout para conexiones lentas (10 segundos)
+        const timeoutPromise = new Promise((_, reject) =>
+          setTimeout(() => reject(new Error('Timeout al cargar asignaciones')), 10000)
+        );
+
+        const fetchPromise = supabase.from("asignaciones").select(`
             *,
             usuarios:idUsuario (nombre),
             plantas:idPlanta (planta),
             tiposSolicitud:idTipoSolicitud (tipoSolicitud)
           `);
 
+        const { data, error } = await Promise.race([fetchPromise, timeoutPromise]);
+
         if (error) throw error;
+        
+        console.log('✅ Asignaciones obtenidas:', data?.length || 0, 'registros');
         setAsignaciones(data || []);
       } catch (err) {
-        console.error("Error fetching asignaciones:", err);
+        console.error("❌ Error fetching asignaciones:", err);
+        setAsignaciones([]); // Asegurar que sea array vacío en caso de error
+        
+        // En caso de timeout o error, no bloquear el sistema
+        if (err.message === 'Timeout al cargar asignaciones') {
+          console.warn('⚠️ Timeout en asignaciones - el sistema continuará con funcionalidad limitada');
+        }
       } finally {
         setLoading(false);
+        console.log('🏁 useAsignaciones loading terminado');
       }
     };
 

@@ -50,13 +50,14 @@ const AdminDashboard = () => {
   const [expandedTicketId, setExpandedTicketId] = useState(null);
 
   // Hooks para datos
-  const { asignaciones, getResponsable } = useAsignaciones();
+  const { asignaciones, loading: loadingAsignaciones, getResponsable } = useAsignaciones();
   
   const {
     tickets,
     loading: loadingTickets,
     refetchTickets,
   } = useAdminTickets(user, asignaciones);
+  
   const stats = useTicketStats(tickets);
   const { 
     crearAtencion, 
@@ -260,7 +261,10 @@ const AdminDashboard = () => {
     return formatMexicanDate(dateString);
   };
 
-  if (loadingTickets) {
+  // El loading general debe considerar ambos estados para usuarios idRol = 2
+  const isGeneralLoading = user?.idRol === 2 ? (loadingAsignaciones || loadingTickets) : loadingTickets;
+
+  if (isGeneralLoading) {
     return (
       <Container>
         <LoadingMessage>Cargando dashboard...</LoadingMessage>
