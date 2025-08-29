@@ -1,17 +1,17 @@
-import { formatMexicanDate } from '../../utils/dateUtils';
-import { useTicketCard } from '../../hooks/useTicketCard';
-import { 
-  DelegationInfo, 
-  DelegationText,
+import { formatMexicanDate } from "../../utils/dateUtils";
+import { useTicketCard } from "../../hooks/useTicketCard";
+import {
   AssignmentInfo,
   AssignmentRow,
   AssignmentLabel,
-  AssignmentValue
-} from './TicketModal.styles';
+  AssignmentValue,
+} from "./TicketModal.styles";
 
-const TicketModalDelegation = ({ ticket, mode, currentUser }) => {
+const TicketModalDelegation = ({ ticket, mode }) => {
   // Usar useTicketCard para obtener información del usuario asignado
-  const ticketData = useTicketCard(ticket, "admin", (date) => formatMexicanDate(date));
+  const ticketData = useTicketCard(ticket, "admin", (date) =>
+    formatMexicanDate(date)
+  );
 
   // No mostrar nada si no hay ticket o es modo respuesta
   if (!ticket || mode === "response") return null;
@@ -32,8 +32,10 @@ const TicketModalDelegation = ({ ticket, mode, currentUser }) => {
 
   // Para tickets estado 2 (reasignado) - mostrar delegación/reasignación
   if (ticket.idEstado === 2) {
-    const fechaDelegacion = ticket.seguimientos?.find((s) => s.idEstado === 2)?.fecha;
-    
+    const fechaDelegacion = ticket.seguimientos?.find(
+      (s) => s.idEstado === 2
+    )?.fecha;
+
     return (
       <>
         <AssignmentInfo>
@@ -46,11 +48,13 @@ const TicketModalDelegation = ({ ticket, mode, currentUser }) => {
           <AssignmentRow>
             <AssignmentLabel>Fecha de asignación:</AssignmentLabel>
             <AssignmentValue>
-              {fechaDelegacion ? formatMexicanDate(fechaDelegacion) : "Fecha no disponible"}
+              {fechaDelegacion
+                ? formatMexicanDate(fechaDelegacion)
+                : "Fecha no disponible"}
             </AssignmentValue>
           </AssignmentRow>
         </AssignmentInfo>
-{/*         
+        {/*         
         <DelegationInfo>
           <DelegationText>
             Este ticket fue reasignado el{" "}
