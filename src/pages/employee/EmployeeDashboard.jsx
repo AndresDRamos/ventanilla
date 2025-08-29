@@ -3,6 +3,7 @@ import EmployeeQuestionnaire from '../components/EmployeeQuestionnaire.jsx';
 import EmployeeTicketsPage from './EmployeeTicketsPage.jsx';
 import TicketSuccess from '../components/TicketSuccess.jsx';
 import useEmployeeTickets from '../hooks/useEmployeeTickets.js';
+import { Spinner } from '../components/UI';
 
 const EmployeeDashboard = ({ employeeData, onLogout }) => {
   const [currentStep, setCurrentStep] = useState('loading'); // loading, tickets, questionnaire, success
@@ -45,10 +46,14 @@ const EmployeeDashboard = ({ employeeData, onLogout }) => {
         alignItems: 'center', 
         height: '100vh',
         background: 'linear-gradient(135deg, var(--color-primary) 0%, #1e3c72 100%)',
-        color: 'white',
-        fontSize: '1.2rem'
       }}>
-        Cargando...
+        <Spinner 
+          height="auto"
+          size="60px"
+          text="Verificando tickets anteriores..."
+          showText={true}
+          textColor="white"
+        />
       </div>
     );
   }

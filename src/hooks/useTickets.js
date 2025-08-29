@@ -260,15 +260,12 @@ export const useTickets = () => {
           });
 
           // Llamar al endpoint ASP.NET interno para enviar email
-          console.log('📧 Iniciando llamada al endpoint ASP.NET...');
           
           const emailPayload = {
             destinatario: usuarioAsignado.correo,
             asunto: `Nuevo Ticket Asignado - #${ticketCompleto.idTicket}`,
             mensaje: emailHTML
           };
-          
-          console.log('📦 Payload del email:', emailPayload);
           
           // Usar proxy en desarrollo, variable de entorno en producción
           const emailEndpoint = import.meta.env.DEV 
@@ -283,17 +280,12 @@ export const useTickets = () => {
             body: JSON.stringify(emailPayload)
           });
 
-          console.log('🔄 Response status:', emailResponse.status);
-          console.log('🔄 Response OK:', emailResponse.ok);
-
           const emailResult = await emailResponse.json();
           console.log('📨 Email result:', emailResult);
 
           if (!emailResult.success) {
             console.error('❌ Email no enviado:', emailResult.error);
             // No fallar la creación del ticket por problemas de notificación
-          } else {
-            console.log('✅ Email enviado exitosamente al usuario asignado');
           }
         } else {
           console.error('❌ Error obteniendo datos para notificación:', {

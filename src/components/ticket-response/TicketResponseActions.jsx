@@ -11,7 +11,7 @@ import {
   HelpText
 } from './TicketResponse.styles';
 import { getButtonText, getHelpText } from '../../utils/ticketResponseUtils';
-import { UserSelector } from '../../shared/components/UI';
+import { UserSelector } from '../UI';
 import { useEffect } from 'react';
 
 const TicketResponseActions = ({ ticketData, actions }) => {

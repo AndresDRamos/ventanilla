@@ -1,5 +1,5 @@
 import { getAvailableActions, getResponseLabel, getResponsePlaceholder } from '../../utils/ticketModalUtils';
-import UserSelector from '../../shared/components/UI/UserSelector';
+import UserSelector from '../UI/UserSelector';
 import { 
   ActionButtonsRow, 
   ActionButton, 

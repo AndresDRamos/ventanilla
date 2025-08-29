@@ -24,16 +24,12 @@ export const useAdminTickets = (user, asignaciones = []) => {
         const startTime = hasInitialFetch.current ? Date.now() - timeoutMs : Date.now();
         
         if (Date.now() - startTime < timeoutMs) {
-          console.log('⏳ Esperando asignaciones para usuario idRol = 2...');
           return; // No hacer fetch hasta que las asignaciones estén disponibles
-        } else {
-          console.warn('⚠️ Timeout esperando asignaciones - procediendo sin filtrar');
         }
       }
 
       try {
         setLoading(true);
-        console.log('🔄 Iniciando fetch de tickets para usuario:', user.idUsuario, 'idRol:', user.idRol);
 
         // Función inline para crear seguimiento inicial
         const createInitialSeguimientoInline = async (ticket) => {
@@ -103,18 +99,67 @@ export const useAdminTickets = (user, asignaciones = []) => {
           )
           .order("idTicket", { ascending: false });
 
-        // Solo verificar asignaciones para usuarios con idRol = 2, no para idRol = 3
+        // Aplicar filtro de asignaciones ANTES de ejecutar la query principal para evitar parpadeo
+        let empleadosPermitidosIds = null;
+        
         if (user?.idRol === 2) {
-          // Solo verificamos que el usuario tenga idUsuario válido
-          if (!user.idUsuario) {
+          // Para usuarios con idRol = 2, filtrar por asignaciones desde el inicio
+          if (!user.idUsuario || !asignaciones || asignaciones.length === 0) {
             setTickets([]);
             setLoading(false);
             return;
           }
+          
+          const asignacionesUsuario = asignaciones.filter(a => a.idUsuario === user.idUsuario);
+          
+          if (asignacionesUsuario.length === 0) {
+            setTickets([]);
+            setLoading(false);
+            return;
+          }
+          
+          // Obtener todos los empleados que coincidan con las asignaciones del usuario
+          const empleadosQueries = asignacionesUsuario.map(asignacion => 
+            supabase
+              .from("empleados")
+              .select("idEmpleado")
+              .eq("idPlanta", asignacion.idPlanta)
+          );
+          
+          const empleadosResults = await Promise.all(empleadosQueries);
+          const empleadosAsignados = empleadosResults.flatMap(result => 
+            result.data || []
+          );
+          
+          empleadosPermitidosIds = [...new Set(empleadosAsignados.map(emp => emp.idEmpleado))];
+          
+          if (empleadosPermitidosIds.length === 0) {
+            setTickets([]);
+            setLoading(false);
+            return;
+          }
+          
+          // Aplicar filtro en la query principal
+          query = query.in("idEmpleado", empleadosPermitidosIds);
+        } else if (user?.idRol === 3) {
+          // Para usuarios con idRol = 3, obtener tickets delegados desde el inicio
+          const { data: delegaciones } = await supabase
+            .from("delegaciones")
+            .select("idTicket")
+            .eq("idUsuario", user.idUsuario)
+            .eq("bActivo", true);
+            
+          if (!delegaciones || delegaciones.length === 0) {
+            setTickets([]);
+            setLoading(false);
+            return;
+          }
+          
+          const ticketsDelegadosIds = delegaciones.map(d => d.idTicket);
+          query = query.in("idTicket", ticketsDelegadosIds);
         }
-        // Para usuarios con idRol = 3, no verificamos asignaciones aquí, se filtran más adelante por delegaciones
 
-        // Aplicar filtros
+        // Aplicar filtros adicionales
         if (filters.planta) {
           // Para filtros directos de planta, necesitamos hacer un sub-query
           const { data: empleadosEnPlanta } = await supabase
@@ -124,7 +169,19 @@ export const useAdminTickets = (user, asignaciones = []) => {
 
           if (empleadosEnPlanta && empleadosEnPlanta.length > 0) {
             const empleadosIds = empleadosEnPlanta.map((emp) => emp.idEmpleado);
-            query = query.in("idEmpleado", empleadosIds);
+            
+            // Si ya tenemos filtro por asignaciones, hacer intersección
+            if (empleadosPermitidosIds) {
+              const empleadosInterseccion = empleadosIds.filter(id => empleadosPermitidosIds.includes(id));
+              if (empleadosInterseccion.length === 0) {
+                setTickets([]);
+                setLoading(false);
+                return;
+              }
+              query = query.in("idEmpleado", empleadosInterseccion);
+            } else {
+              query = query.in("idEmpleado", empleadosIds);
+            }
           } else {
             // No hay empleados en esa planta
             setTickets([]);
@@ -151,7 +208,19 @@ export const useAdminTickets = (user, asignaciones = []) => {
             const empleadosIds = empleadosFiltrados.map(
               (emp) => emp.idEmpleado
             );
-            query = query.in("idEmpleado", empleadosIds);
+            
+            // Si ya tenemos filtro por asignaciones, hacer intersección
+            if (empleadosPermitidosIds) {
+              const empleadosInterseccion = empleadosIds.filter(id => empleadosPermitidosIds.includes(id));
+              if (empleadosInterseccion.length === 0) {
+                setTickets([]);
+                setLoading(false);
+                return;
+              }
+              query = query.in("idEmpleado", empleadosInterseccion);
+            } else {
+              query = query.in("idEmpleado", empleadosIds);
+            }
           } else {
             // No hay empleados que coincidan
             setTickets([]);
@@ -193,58 +262,7 @@ export const useAdminTickets = (user, asignaciones = []) => {
           }
         }
 
-        // Aplicar filtro de asignaciones después de obtener los datos (solo para no-admin)
-        if (user?.idRol !== 1) {
-          // Lógica específica para usuarios con idRol = 3 (supervisores)
-          if (user.idRol === 3) {
-            // Obtener tickets delegados a este usuario que estén activos
-            const { data: delegaciones } = await supabase
-              .from("delegaciones")
-              .select("idTicket")
-              .eq("idUsuario", user.idUsuario)
-              .eq("bActivo", true);
-
-            if (delegaciones && delegaciones.length > 0) {
-              // Filtrar solo los tickets que fueron delegados a este usuario
-              const ticketsDelegadosIds = delegaciones.map((d) => d.idTicket);
-              sortedData = sortedData.filter((ticket) =>
-                ticketsDelegadosIds.includes(ticket.idTicket)
-              );
-            } else {
-              // Si no tiene tickets delegados, no ve ninguno
-              sortedData = [];
-            }
-          } else {
-            // Lógica original para usuarios con idRol = 2 (administradores/supervisores)
-            // Filtrar usando las asignaciones del usuario recibidas como parámetro
-            const asignacionesUsuario = asignaciones.filter(a => a.idUsuario === user.idUsuario);
-
-            if (asignacionesUsuario && asignacionesUsuario.length > 0) {
-              // Filtrar tickets basado en las asignaciones
-              sortedData = sortedData.filter((ticket) => {
-                const matches = asignacionesUsuario.some(
-                  (asignacion) =>
-                    ticket.empleados?.idPlanta === asignacion.idPlanta &&
-                    ticket.idTipoSolicitud === asignacion.idTipoSolicitud
-                );
-
-                return matches;
-              });
-            } else {
-              // Si no hay asignaciones específicas para el usuario, 
-              // verificar si es por timeout/error o realmente no tiene asignaciones
-              if (asignaciones.length === 0) {
-                console.warn('⚠️ Sin asignaciones disponibles - mostrando todos los tickets');
-                // En caso de error/timeout, mostrar todos los tickets para no bloquear al usuario
-              } else {
-                // El usuario realmente no tiene asignaciones específicas
-                sortedData = [];
-              }
-            }
-          }
-        }
-
-        // Aplicar ordenamiento
+        // Aplicar ordenamiento directamente sobre los datos filtrados
         if (filters.sortBy === "prioridad") {
           sortedData.sort((a, b) => a.idPrioridad - b.idPrioridad);
         } else {
@@ -282,17 +300,12 @@ export const useAdminTickets = (user, asignaciones = []) => {
       
       // Para usuarios idRol = 2, verificar que las asignaciones estén cargadas
       if (user.idRol === 2) {
-        console.log('🔍 Usuario idRol = 2, verificando asignaciones:', asignaciones?.length);
         if (asignaciones && asignaciones.length > 0) {
-          console.log('✅ Asignaciones disponibles, ejecutando fetch');
           fetchTickets();
-        } else {
-          console.log('⏳ Asignaciones aún no disponibles, esperando...');
-          // No setear loading = false aquí, mantener el estado de carga
         }
+        // Si no hay asignaciones aún, el fetchTickets se ejecutará cuando las asignaciones cambien
       } else {
         // Para otros roles, ejecutar inmediatamente
-        console.log('👤 Usuario idRol =', user.idRol, 'ejecutando fetch inmediato');
         fetchTickets();
       }
     }
@@ -323,8 +336,6 @@ export const useAsignaciones = () => {
   useEffect(() => {
     const fetchAsignaciones = async () => {
       try {
-        console.log('🔄 Iniciando fetch de asignaciones...');
-        
         // Timeout para conexiones lentas (10 segundos)
         const timeoutPromise = new Promise((_, reject) =>
           setTimeout(() => reject(new Error('Timeout al cargar asignaciones')), 10000)
@@ -341,19 +352,12 @@ export const useAsignaciones = () => {
 
         if (error) throw error;
         
-        console.log('✅ Asignaciones obtenidas:', data?.length || 0, 'registros');
         setAsignaciones(data || []);
       } catch (err) {
-        console.error("❌ Error fetching asignaciones:", err);
+        console.error("Error fetching asignaciones:", err);
         setAsignaciones([]); // Asegurar que sea array vacío en caso de error
-        
-        // En caso de timeout o error, no bloquear el sistema
-        if (err.message === 'Timeout al cargar asignaciones') {
-          console.warn('⚠️ Timeout en asignaciones - el sistema continuará con funcionalidad limitada');
-        }
       } finally {
         setLoading(false);
-        console.log('🏁 useAsignaciones loading terminado');
       }
     };
 

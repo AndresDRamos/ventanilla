@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
-import { useUsers } from '../../../hooks/useUsers';
+import { useUsers } from '../../hooks/useUsers';
 
 const UserSelector = ({ 
   selectedUser, 

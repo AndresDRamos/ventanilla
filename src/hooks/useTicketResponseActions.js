@@ -182,8 +182,6 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
                        (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
         const directLink = `${baseUrl}/ventanilla/ticket/${nuevoToken}`;
 
-        console.log('🔄 Enviando notificación de reasignación desde ticket-response a:', usuarioDestino.nombre, usuarioDestino.correo);
-
         // Obtener fecha de creación del ticket desde seguimientos
         const { data: fechaCreacionData, error: fechaError } = await supabase
           .from('seguimientos')
@@ -219,8 +217,6 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
           ? '/api/email'  // Usa el proxy de Vite en desarrollo
           : import.meta.env.VITE_EMAIL_ENDPOINT || 'https://cors-anywhere.herokuapp.com/http://172.17.201.2/SendEmail.aspx';
 
-        console.log('📧 Enviando email a endpoint:', emailEndpoint);
-
         const emailResponse = await fetch(emailEndpoint, {
           method: 'POST',
           headers: {
@@ -234,13 +230,10 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
         });
 
         const emailResult = await emailResponse.json();
-        console.log('📨 Resultado de email de reasignación:', emailResult);
 
         if (!emailResult.success) {
           console.warn('⚠️ Email no enviado en reasignación:', emailResult.error);
           // No fallar la reasignación por problemas de notificación
-        } else {
-          console.log('✅ Email de reasignación enviado exitosamente');
         }
       } catch (notificationError) {
         console.warn('⚠️ Error en sistema de notificaciones de reasignación:', notificationError.message);

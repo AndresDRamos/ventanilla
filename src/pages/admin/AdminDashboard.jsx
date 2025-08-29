@@ -14,6 +14,7 @@ import {
 } from "../../hooks/useTickets.js";
 import { useUsuariosAtencion } from "../../hooks/useUsuariosAtencion.js";
 import { formatMexicanDate } from "../../utils/dateUtils.js";
+import { Spinner } from "../../components/UI";
 
 // Components
 import DashboardHeader from "../../components/DashboardHeader.jsx";
@@ -267,7 +268,11 @@ const AdminDashboard = () => {
   if (isGeneralLoading) {
     return (
       <Container>
-        <LoadingMessage>Cargando dashboard...</LoadingMessage>
+        <Spinner 
+          height="50vh" 
+          size="60px"
+          text="Cargando tickets y configuración..."
+        />
       </Container>
     );
   }
@@ -353,15 +358,6 @@ const FixedContent = styled.div`
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-`;
-
-const LoadingMessage = styled.div`
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  height: 50vh;
-  font-size: 1.2rem;
-  color: var(--color-gray);
 `;
 
 export default AdminDashboard;

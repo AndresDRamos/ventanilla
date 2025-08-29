@@ -152,7 +152,7 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
     // 5. Llamar al endpoint ASP.NET interno para enviar email
     const emailEndpoint = import.meta.env.DEV 
       ? '/api/email'  // Usa el proxy de Vite en desarrollo
-      : import.meta.env.VITE_EMAIL_ENDPOINT || 'https://cors-anywhere.herokuapp.com/http://172.17.201.2/SendEmail.aspx';
+      : import.meta.env.VITE_EMAIL_ENDPOINT || '/api/send-email';
 
     const emailResponse = await fetch(emailEndpoint, {
       method: 'POST',
@@ -241,7 +241,7 @@ export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
     // 5. Llamar al endpoint ASP.NET interno para enviar email
     const emailEndpoint = import.meta.env.DEV 
       ? '/api/email'  // Usa el proxy de Vite en desarrollo
-      : import.meta.env.VITE_EMAIL_ENDPOINT || 'https://cors-anywhere.herokuapp.com/http://172.17.201.2/SendEmail.aspx';
+      : import.meta.env.VITE_EMAIL_ENDPOINT || '/api/send-email';
 
     const emailResponse = await fetch(emailEndpoint, {
       method: 'POST',
