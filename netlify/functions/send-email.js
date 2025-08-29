@@ -1,4 +1,8 @@
-exports.handler = async (event, context) => {
+exports.handler = async (event, _context) => {
+  console.log('🚀 Función iniciada');
+  console.log('📝 Método:', event.httpMethod);
+  console.log('📦 Body:', event.body);
+  
   // Configurar CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -9,6 +13,7 @@ exports.handler = async (event, context) => {
 
   // Responder a las requests OPTIONS para CORS preflight
   if (event.httpMethod === 'OPTIONS') {
+    console.log('✅ Respondiendo a OPTIONS preflight');
     return {
       statusCode: 200,
       headers,
@@ -18,6 +23,7 @@ exports.handler = async (event, context) => {
 
   // Solo permitir POST
   if (event.httpMethod !== 'POST') {
+    console.log('❌ Método no permitido:', event.httpMethod);
     return {
       statusCode: 405,
       headers,
@@ -26,15 +32,31 @@ exports.handler = async (event, context) => {
   }
 
   try {
-    const { destinatario, asunto, mensaje } = JSON.parse(event.body);
+    console.log('📧 Procesando request POST...');
+    
+    if (!event.body) {
+      console.log('❌ No hay body en la request');
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ error: 'No body provided' })
+      };
+    }
+
+    const requestData = JSON.parse(event.body);
+    console.log('📋 Datos parseados:', JSON.stringify(requestData, null, 2));
+    
+    const { destinatario, asunto, mensaje } = requestData;
 
     // Validar datos requeridos
     if (!destinatario || !asunto || !mensaje) {
+      console.log('❌ Faltan campos requeridos');
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({ 
-          error: 'Faltan campos requeridos: destinatario, asunto, mensaje' 
+          error: 'Faltan campos requeridos: destinatario, asunto, mensaje',
+          received: { destinatario: !!destinatario, asunto: !!asunto, mensaje: !!mensaje }
         })
       };
     }
@@ -42,12 +64,14 @@ exports.handler = async (event, context) => {
     console.log('📧 Netlify Proxy: Iniciando envío de email...');
     console.log('📦 Destinatario:', destinatario);
     console.log('📦 Asunto:', asunto);
+    console.log('📦 Mensaje length:', mensaje.length);
 
     // URL del servidor ASP.NET interno
     const aspNetUrl = 'http://172.17.201.2/SendEmail.aspx';
+    console.log('🔗 URL destino:', aspNetUrl);
 
     // Realizar la petición al servidor ASP.NET
-    const response = await fetch(aspNetUrl, {
+    const fetchOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -58,9 +82,12 @@ exports.handler = async (event, context) => {
         asunto,
         mensaje
       })
-    });
-
+    };
+    
+    console.log('🚀 Iniciando fetch...');
+    const response = await fetch(aspNetUrl, fetchOptions);
     console.log('🔄 Response status:', response.status);
+    console.log('🔄 Response ok:', response.ok);
     
     const responseText = await response.text();
     console.log('📝 Response text:', responseText);
@@ -69,12 +96,15 @@ exports.handler = async (event, context) => {
     let responseData;
     try {
       responseData = JSON.parse(responseText);
+      console.log('✅ JSON parseado correctamente:', responseData);
     } catch (parseError) {
-      console.error('❌ Error parseando JSON response:', parseError);
+      console.error('❌ Error parseando JSON response:', parseError.message);
+      console.log('📄 Raw response:', responseText.substring(0, 200));
       responseData = {
         success: false,
         error: 'Response no es JSON válido',
-        rawResponse: responseText.substring(0, 500)
+        rawResponse: responseText.substring(0, 500),
+        parseError: parseError.message
       };
     }
 
@@ -104,7 +134,8 @@ exports.handler = async (event, context) => {
     }
 
   } catch (error) {
-    console.error('💥 Error en proxy de email:', error);
+    console.error('💥 Error general en proxy:', error);
+    console.error('💥 Stack trace:', error.stack);
     
     return {
       statusCode: 500,
@@ -112,7 +143,8 @@ exports.handler = async (event, context) => {
       body: JSON.stringify({
         success: false,
         error: 'Error interno del proxy',
-        details: error.message
+        details: error.message,
+        stack: error.stack
       })
     };
   }
