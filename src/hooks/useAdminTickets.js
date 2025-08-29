@@ -3,7 +3,7 @@ import { supabase } from "../supabase/supabase.config.jsx";
 import { enviarNotificacionDelegacion } from "../services/notificationService.js";
 
 // Hook para obtener todos los tickets con filtros
-export const useAdminTickets = (user) => {
+export const useAdminTickets = (user, asignaciones = []) => {
   const [tickets, setTickets] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -89,16 +89,8 @@ export const useAdminTickets = (user) => {
 
         // Solo verificar asignaciones para usuarios con idRol = 2, no para idRol = 3
         if (user?.idRol === 2) {
-          const { data: asignaciones } = await supabase
-            .from("asignaciones")
-            .select("idPlanta, idTipoSolicitud")
-            .eq("idUsuario", user.id);
-
-          if (asignaciones && asignaciones.length > 0) {
-            // No podemos filtrar con OR en JOIN, así que obtenemos todos los datos primero
-            // y luego filtraremos en el cliente
-          } else {
-            // Si no tiene asignaciones, no puede ver ningún ticket
+          // Solo verificamos que el usuario tenga idUsuario válido
+          if (!user.idUsuario) {
             setTickets([]);
             setLoading(false);
             return;
@@ -193,7 +185,7 @@ export const useAdminTickets = (user) => {
             const { data: delegaciones } = await supabase
               .from("delegaciones")
               .select("idTicket")
-              .eq("idUsuario", user.id)
+              .eq("idUsuario", user.idUsuario)
               .eq("bActivo", true);
 
             if (delegaciones && delegaciones.length > 0) {
@@ -208,15 +200,13 @@ export const useAdminTickets = (user) => {
             }
           } else {
             // Lógica original para usuarios con idRol = 2 (administradores/supervisores)
-            const { data: asignaciones } = await supabase
-              .from("asignaciones")
-              .select("idPlanta, idTipoSolicitud")
-              .eq("idUsuario", user.id);
+            // Filtrar usando las asignaciones del usuario recibidas como parámetro
+            const asignacionesUsuario = asignaciones.filter(a => a.idUsuario === user.idUsuario);
 
-            if (asignaciones && asignaciones.length > 0) {
+            if (asignacionesUsuario && asignacionesUsuario.length > 0) {
               // Filtrar tickets basado en las asignaciones
               sortedData = sortedData.filter((ticket) => {
-                const matches = asignaciones.some(
+                const matches = asignacionesUsuario.some(
                   (asignacion) =>
                     ticket.empleados?.idPlanta === asignacion.idPlanta &&
                     ticket.idTipoSolicitud === asignacion.idTipoSolicitud
@@ -257,16 +247,16 @@ export const useAdminTickets = (user) => {
         setLoading(false);
       }
     },
-    [user]
-  ); // Incluir user como dependencia
+    [user, asignaciones]
+  ); // Incluir user y asignaciones como dependencias
 
   useEffect(() => {
     // Solo ejecutar si el usuario cambió o es la primera vez
     if (
       user &&
-      (currentUserId.current !== user.id || !hasInitialFetch.current)
+      (currentUserId.current !== user.idUsuario || !hasInitialFetch.current)
     ) {
-      currentUserId.current = user.id;
+      currentUserId.current = user.idUsuario;
       hasInitialFetch.current = true;
       fetchTickets();
     }
@@ -587,7 +577,7 @@ export const useAtenciones = (user) => {
           .from("seguimientos")
           .insert({
             idTicket,
-            idUsuario: user.id,
+            idUsuario: user.idUsuario,
             idEstado: 2,
           });
 

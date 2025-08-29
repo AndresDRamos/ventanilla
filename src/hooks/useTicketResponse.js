@@ -139,7 +139,7 @@ const validateAndLoadTicket = async (token) => {
   const usuarioId = tokenData.idUsuario || tokenData.id_usuario;
   const { data: usuarioData } = await supabase
     .from('usuarios')
-    .select('nombre, correo, idRol')
+    .select('idUsuario, nombre, correo, idRol')  // ← Agregado idUsuario
     .eq('idUsuario', usuarioId)
     .single();
 

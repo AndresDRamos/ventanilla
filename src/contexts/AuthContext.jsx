@@ -36,6 +36,7 @@ export const AuthProvider = ({ children }) => {
 
       const userData = {
         id: data.idUsuario,
+        idUsuario: data.idUsuario,
         nombre: data.nombre,
         usuario: data.usuario,
         correo: data.correo,
@@ -95,6 +96,7 @@ export const AuthProvider = ({ children }) => {
 
       const adminUser = {
         id: userData.idUsuario,
+        idUsuario: userData.idUsuario,
         nombre: userData.nombre,
         usuario: userData.usuario || userData.correo, // Usar correo como usuario si no tiene campo usuario
         correo: userData.correo,

@@ -10,13 +10,22 @@ const TicketResponseHeader = ({ ticket }) => {
     // Solo permitir acceso al panel admin si el usuario tiene rol de admin (idRol = 2)
     if (user.idRol === 2) {
       try {
-        // Auto-login usando los datos del usuario
-        await adminAutoLogin(user);
+        // Auto-login usando los datos del usuario y esperar a que se complete
+        const result = await adminAutoLogin(user);
         
-        // Abrir el panel admin en una nueva pestaña
-        window.open('/ventanilla/admin', '_blank');
+        if (result.success) {
+          // Esperar un poco para que el contexto se sincronice
+          setTimeout(() => {
+            // Abrir el panel admin en una nueva pestaña
+            window.open('/ventanilla/admin', '_blank');
+          }, 200);
+        } else {
+          console.warn('⚠️ Auto-login falló, abriendo sin autenticación');
+          // Fallback: abrir el panel admin sin auto-login
+          window.open('/ventanilla/admin', '_blank');
+        }
       } catch (error) {
-        console.error('Error en auto-login:', error);
+        console.error('❌ Error en auto-login:', error);
         // Fallback: abrir el panel admin sin auto-login
         window.open('/ventanilla/admin', '_blank');
       }

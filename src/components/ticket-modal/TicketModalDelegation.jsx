@@ -50,7 +50,7 @@ const TicketModalDelegation = ({ ticket, mode, currentUser }) => {
             </AssignmentValue>
           </AssignmentRow>
         </AssignmentInfo>
-        
+{/*         
         <DelegationInfo>
           <DelegationText>
             Este ticket fue reasignado el{" "}
@@ -59,7 +59,7 @@ const TicketModalDelegation = ({ ticket, mode, currentUser }) => {
               <span> Usted puede atender este ticket directamente.</span>
             )}
           </DelegationText>
-        </DelegationInfo>
+        </DelegationInfo> */}
       </>
     );
   }

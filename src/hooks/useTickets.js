@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabase.config.jsx';
+import { TicketEmailHTML } from '../components/EmailBody.jsx';
 
 // Hook para obtener plantas
 export const usePlantas = () => {
@@ -198,7 +199,7 @@ export const useTickets = () => {
 
       if (tokenError) throw tokenError;
 
-      // Enviar notificación al usuario asignado
+      // Enviar notificación al usuario asignado usando endpoint interno
       try {
         // Obtener datos completos del ticket recién creado
         const { data: ticketCompleto, error: ticketCompletoError } = await supabase
@@ -223,76 +224,87 @@ export const useTickets = () => {
           .single();
 
         if (!ticketCompletoError && !usuarioError && ticketCompleto && usuarioAsignado) {
-          // Enviar notificación usando el token ya creado
+          // Enviar notificación usando endpoint ASP.NET interno
           const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
                          (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
           const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
 
-          // Log para diagnosticar el error 400
-          console.log('📧 Datos que se envían a Edge Function:', {
-            ticketData: {
-              idTicket: ticketCompleto?.idTicket,
-              titulo: ticketCompleto?.titulo,
-              empleado: ticketCompleto?.empleados?.nombre,
-              tipoSolicitud: ticketCompleto?.tiposSolicitud?.tipoSolicitud
-            },
-            usuario: {
-              idUsuario: usuarioAsignado?.idUsuario,
-              nombre: usuarioAsignado?.nombre,
-              correo: usuarioAsignado?.correo
-            },
-            directLink: directLink,
-            notificationType: 'nuevo'
-          });
+          // Obtener fecha de creación del ticket desde seguimientos
+          const { data: fechaCreacionData, error: fechaError } = await supabase
+            .from('seguimientos')
+            .select('fecha')
+            .eq('idTicket', ticketCompleto.idTicket)
+            .eq('idEstado', 1)
+            .order('fecha', { ascending: true })
+            .limit(1)
+            .single();
 
-          const { data, error } = await supabase.functions.invoke('send-email-notification', {
-            body: {
-              ticketData: ticketCompleto,
-              usuario: usuarioAsignado,
-              directLink: directLink,
-              notificationType: 'nuevo' // Nuevo tipo para tickets recién creados
-            }
-          });
-
-          if (error) {
-            console.error('❌ Error completo de Edge Function:', {
-              name: error.name,
-              message: error.message,
-              context: error.context,
-              details: error.details,
-              status: error.status
+          let fechaCreacion = 'Fecha no disponible';
+          if (fechaCreacionData && !fechaError) {
+            fechaCreacion = new Date(fechaCreacionData.fecha).toLocaleDateString('es-MX', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+              hour: '2-digit',
+              minute: '2-digit'
             });
-            
-            // Si es error 400/403 de Resend, no fallar la creación del ticket
-            if (error.message?.includes('Bad Request') || error.message?.includes('403')) {
-              console.warn('⚠️ Email no enviado debido a limitaciones de Resend (ticket creado exitosamente)');
-              // Continuar sin fallar
-            } else {
-              throw error;
-            }
           }
 
-          const notificationResult = {
-            success: data.success,
-            token: token,
+          // Generar HTML del email usando el componente
+          const emailHTML = TicketEmailHTML({
+            ticket: ticketCompleto,
+            usuario: usuarioAsignado,
             directLink: directLink,
-            emailResult: {
-              success: data.success,
-              messageId: data.messageId,
-              to: data.to
-            }
-          };
+            fechaCreacion: fechaCreacion,
+            tipo: 'nuevo'
+          });
 
-          if (notificationResult.success) {
-            // Notificación enviada exitosamente
+          // Llamar al endpoint ASP.NET interno para enviar email
+          console.log('📧 Iniciando llamada al endpoint ASP.NET...');
+          
+          const emailPayload = {
+            destinatario: usuarioAsignado.correo,
+            asunto: `Nuevo Ticket Asignado - #${ticketCompleto.idTicket}`,
+            mensaje: emailHTML
+          };
+          
+          console.log('📦 Payload del email:', emailPayload);
+          
+          // Usar proxy en desarrollo, IP directa en producción
+          const emailEndpoint = import.meta.env.DEV 
+            ? '/api/email'  // Usa el proxy de Vite en desarrollo
+            : 'http://172.17.201.2/SendEmail.aspx';  // IP directa en producción
+          
+          const emailResponse = await fetch(emailEndpoint, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(emailPayload)
+          });
+
+          console.log('🔄 Response status:', emailResponse.status);
+          console.log('🔄 Response OK:', emailResponse.ok);
+
+          const emailResult = await emailResponse.json();
+          console.log('📨 Email result:', emailResult);
+
+          if (!emailResult.success) {
+            console.error('❌ Email no enviado:', emailResult.error);
+            // No fallar la creación del ticket por problemas de notificación
           } else {
-            // Error enviando notificación
+            console.log('✅ Email enviado exitosamente al usuario asignado');
           }
         } else {
-          // Error obteniendo datos para notificación
+          console.error('❌ Error obteniendo datos para notificación:', {
+            ticketCompletoError,
+            usuarioError,
+            hasTicketCompleto: !!ticketCompleto,
+            hasUsuarioAsignado: !!usuarioAsignado
+          });
         }
       } catch (notificationError) {
-        // Error en sistema de notificaciones (ticket creado exitosamente)
+        console.warn('⚠️ Error en sistema de notificaciones (ticket creado exitosamente):', notificationError.message);
         // No fallar la creación del ticket por problemas de notificación
       }
 

@@ -103,7 +103,7 @@ export const useNotifications = () => {
       },
       mensaje: !puedeEmail 
         ? 'Usuario sin correo registrado'
-        : 'Listo para envío via Resend'
+        : 'Listo para envío via servidor interno'
     };
   };
 

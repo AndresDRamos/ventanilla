@@ -2,6 +2,7 @@
 // Sistema con Resend + Edge Functions (profesional)
 
 import { supabase } from '../supabase/supabase.config.jsx';
+import { TicketEmailHTML } from '../components/EmailBody.jsx';
 
 /**
  * Genera         notificationType: 'nuevo' // Para distinguir tipos de notificación
@@ -118,45 +119,67 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
                    (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
     const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
 
-    // 3. Llamar a Edge Function para enviar email
-    const { data, error } = await supabase.functions.invoke('send-email-notification', {
-      body: {
-        ticketData: ticket,
-        usuario: usuario,
-        directLink: directLink,
-        notificationType: 'delegacion' // Para distinguir tipos de notificación
-      }
+    // 3. Obtener fecha de creación del ticket desde seguimientos
+    const { data: fechaCreacionData, error: fechaError } = await supabase
+      .from('seguimientos')
+      .select('fecha')
+      .eq('idTicket', ticket.idTicket)
+      .eq('idEstado', 1)
+      .order('fecha', { ascending: true })
+      .limit(1)
+      .single();
+
+    let fechaCreacion = 'Fecha no disponible';
+    if (fechaCreacionData && !fechaError) {
+      fechaCreacion = new Date(fechaCreacionData.fecha).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // 4. Construir mensaje HTML para el email usando el componente
+    const emailHTML = TicketEmailHTML({
+      ticket: ticket,
+      usuario: usuario,
+      directLink: directLink,
+      fechaCreacion: fechaCreacion,
+      tipo: 'delegado'
     });
 
-    if (error) {
-      console.error('Error invocando Edge Function:', error);
-      
-      // Si es error 400/403 de Resend, devolver resultado parcial en lugar de fallar
-      if (error.message?.includes('Bad Request') || error.message?.includes('403')) {
-        console.warn('⚠️ Email no enviado debido a limitaciones de Resend');
-        return {
-          success: false,
-          token: token,
-          directLink: directLink,
-          error: 'Email service temporarily unavailable',
-          emailResult: {
-            success: false,
-            error: 'Resend domain verification required'
-          }
-        };
-      }
-      
-      throw error;
+    // 5. Llamar al endpoint ASP.NET interno para enviar email
+    const emailEndpoint = import.meta.env.DEV 
+      ? '/api/email'  // Usa el proxy de Vite en desarrollo
+      : 'http://172.17.201.2/SendEmail.aspx';  // IP directa en producción
+
+    const emailResponse = await fetch(emailEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        destinatario: usuario.correo,
+        asunto: `Ticket Delegado para Atención - #${ticket.idTicket}`,
+        mensaje: emailHTML
+      })
+    });
+
+    const emailResult = await emailResponse.json();
+
+    if (!emailResult.success) {
+      throw new Error(emailResult.error || 'Error enviando email');
     }
 
     return {
-      success: data.success,
+      success: true,
       token: token,
       directLink: directLink,
       emailResult: {
-        success: data.success,
-        messageId: data.messageId,
-        to: data.to
+        success: true,
+        messageId: 'internal-email-' + Date.now(),
+        to: usuario.correo
       }
     };
 
@@ -185,46 +208,67 @@ export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
                    (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
     const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
 
-    // 3. Llamar a Edge Function para enviar email
+    // 3. Obtener fecha de creación del ticket desde seguimientos
+    const { data: fechaCreacionData, error: fechaError } = await supabase
+      .from('seguimientos')
+      .select('fecha')
+      .eq('idTicket', ticket.idTicket)
+      .eq('idEstado', 1)
+      .order('fecha', { ascending: true })
+      .limit(1)
+      .single();
 
-    const { data, error } = await supabase.functions.invoke('send-email-notification', {
-      body: {
-        ticketData: ticket,
-        usuario: usuario,
-        directLink: directLink,
-        notificationType: 'nuevo' // Nuevo tipo para tickets recién creados
-      }
+    let fechaCreacion = 'Fecha no disponible';
+    if (fechaCreacionData && !fechaError) {
+      fechaCreacion = new Date(fechaCreacionData.fecha).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // 4. Construir mensaje HTML para el email usando el componente
+    const emailHTML = TicketEmailHTML({
+      ticket: ticket,
+      usuario: usuario,
+      directLink: directLink,
+      fechaCreacion: fechaCreacion,
+      tipo: 'nuevo'
     });
 
-    if (error) {
-      console.error('Error invocando Edge Function:', error);
-      
-      // Si es error 400/403 de Resend, devolver resultado parcial en lugar de fallar
-      if (error.message?.includes('Bad Request') || error.message?.includes('403')) {
-        console.warn('⚠️ Email no enviado debido a limitaciones de Resend');
-        return {
-          success: false,
-          token: token,
-          directLink: directLink,
-          error: 'Email service temporarily unavailable',
-          emailResult: {
-            success: false,
-            error: 'Resend domain verification required'
-          }
-        };
-      }
-      
-      throw error;
+    // 5. Llamar al endpoint ASP.NET interno para enviar email
+    const emailEndpoint = import.meta.env.DEV 
+      ? '/api/email'  // Usa el proxy de Vite en desarrollo
+      : 'http://172.17.201.2/SendEmail.aspx';  // IP directa en producción
+
+    const emailResponse = await fetch(emailEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        destinatario: usuario.correo,
+        asunto: `Nuevo Ticket Asignado - #${ticket.idTicket}`,
+        mensaje: emailHTML
+      })
+    });
+
+    const emailResult = await emailResponse.json();
+
+    if (!emailResult.success) {
+      throw new Error(emailResult.error || 'Error enviando email');
     }
 
     return {
-      success: data.success,
+      success: true,
       token: token,
       directLink: directLink,
       emailResult: {
-        success: data.success,
-        messageId: data.messageId,
-        to: data.to
+        success: true,
+        messageId: 'internal-email-' + Date.now(),
+        to: usuario.correo
       }
     };
 

@@ -1,4 +1,5 @@
 import { supabase } from '../supabase/supabase.config.jsx';
+import { TicketEmailHTML } from '../components/EmailBody.jsx';
 
 export const useTicketResponseActions = (ticket, token, navigate) => {
   const handleSubmitResponse = async (response, setIsSubmitting, setError, setSuccess) => {
@@ -181,32 +182,68 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
                        (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
         const directLink = `${baseUrl}/ventanilla/ticket/${nuevoToken}`;
 
-        const { data, error } = await supabase.functions.invoke('send-email-notification', {
-          body: {
-            ticketData: ticketCompleto,
-            usuario: usuarioDestino,
-            directLink: directLink,
-            notificationType: 'delegacion' // Para reasignaciones
-          }
+        console.log('🔄 Enviando notificación de reasignación desde ticket-response a:', usuarioDestino.nombre, usuarioDestino.correo);
+
+        // Obtener fecha de creación del ticket desde seguimientos
+        const { data: fechaCreacionData, error: fechaError } = await supabase
+          .from('seguimientos')
+          .select('fecha')
+          .eq('idTicket', ticketCompleto.idTicket)
+          .eq('idEstado', 1)
+          .order('fecha', { ascending: true })
+          .limit(1)
+          .single();
+
+        let fechaCreacion = 'Fecha no disponible';
+        if (fechaCreacionData && !fechaError) {
+          fechaCreacion = new Date(fechaCreacionData.fecha).toLocaleDateString('es-MX', {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+          });
+        }
+
+        // Generar HTML del email usando el componente
+        const emailHTML = TicketEmailHTML({
+          ticket: ticketCompleto,
+          usuario: usuarioDestino,
+          directLink: directLink,
+          fechaCreacion: fechaCreacion,
+          tipo: 'reasignado'
         });
 
-        if (error) {
-          console.error('Error invocando Edge Function:', error);
-          
-          // Si es error 400/403 de Resend, no fallar la reasignación
-          if (error.message?.includes('Bad Request') || error.message?.includes('403')) {
-            console.warn('⚠️ Email no enviado debido a limitaciones de Resend (reasignación completada)');
-            // Continuar sin fallar
-          } else {
-            throw error;
-          }
-        } else if (data.success) {
-          // Notificación enviada exitosamente
+        // Usar proxy en desarrollo, IP directa en producción
+        const emailEndpoint = import.meta.env.DEV 
+          ? '/api/email'  // Usa el proxy de Vite en desarrollo
+          : 'http://172.17.201.2/SendEmail.aspx';  // IP directa en producción
+
+        console.log('📧 Enviando email a endpoint:', emailEndpoint);
+
+        const emailResponse = await fetch(emailEndpoint, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            destinatario: usuarioDestino.correo,
+            asunto: `Ticket Reasignado para Atención - #${ticketCompleto.idTicket}`,
+            mensaje: emailHTML
+          })
+        });
+
+        const emailResult = await emailResponse.json();
+        console.log('📨 Resultado de email de reasignación:', emailResult);
+
+        if (!emailResult.success) {
+          console.warn('⚠️ Email no enviado en reasignación:', emailResult.error);
+          // No fallar la reasignación por problemas de notificación
         } else {
-          // Error enviando notificación (reasignación completada)
+          console.log('✅ Email de reasignación enviado exitosamente');
         }
       } catch (notificationError) {
-        // Error en sistema de notificaciones (reasignación completada)
+        console.warn('⚠️ Error en sistema de notificaciones de reasignación:', notificationError.message);
         // No fallar la reasignación por problemas de notificación
       }
 

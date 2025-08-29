@@ -24,6 +24,7 @@ import TicketModal from "../../components/ticket-modal/TicketModal.jsx";
 
 const AdminDashboard = () => {
   const { user, logout } = useAppAuth();
+  
   const [filters, setFilters] = useState({
     planta: "",
     tipoSolicitud: "",
@@ -49,13 +50,14 @@ const AdminDashboard = () => {
   const [expandedTicketId, setExpandedTicketId] = useState(null);
 
   // Hooks para datos
+  const { asignaciones, getResponsable } = useAsignaciones();
+  
   const {
     tickets,
     loading: loadingTickets,
     refetchTickets,
-  } = useAdminTickets(user);
+  } = useAdminTickets(user, asignaciones);
   const stats = useTicketStats(tickets);
-  const { getResponsable } = useAsignaciones();
   const { 
     crearAtencion, 
     delegarTicket, 
