@@ -217,7 +217,7 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
         // Usar proxy en desarrollo, IP directa en producción
         const emailEndpoint = import.meta.env.DEV 
           ? '/api/email'  // Usa el proxy de Vite en desarrollo
-          : 'http://172.17.201.2/SendEmail.aspx';  // IP directa en producción
+          : 'https://cors-anywhere.herokuapp.com/http://172.17.201.2/SendEmail.aspx';  // Proxy CORS en producción
 
         console.log('📧 Enviando email a endpoint:', emailEndpoint);
 

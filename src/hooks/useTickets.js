@@ -270,10 +270,10 @@ export const useTickets = () => {
           
           console.log('📦 Payload del email:', emailPayload);
           
-          // Usar proxy en desarrollo, IP directa en producción
+          // Usar proxy en desarrollo, proxy CORS en producción
           const emailEndpoint = import.meta.env.DEV 
             ? '/api/email'  // Usa el proxy de Vite en desarrollo
-            : 'http://172.17.201.2/SendEmail.aspx';  // IP directa en producción
+            : 'https://cors-anywhere.herokuapp.com/http://172.17.201.2/SendEmail.aspx';  // Proxy CORS en producción
           
           const emailResponse = await fetch(emailEndpoint, {
             method: 'POST',
