@@ -66,8 +66,8 @@ exports.handler = async (event, _context) => {
     console.log('📦 Asunto:', asunto);
     console.log('📦 Mensaje length:', mensaje.length);
 
-    // URL del servidor ASP.NET interno
-    const aspNetUrl = 'http://172.17.201.2/SendEmail.aspx';
+    // URL del servidor ASP.NET usando dominio público
+    const aspNetUrl = 'http://ezisol.com.mx/SendEmail.aspx';
     console.log('🔗 URL destino:', aspNetUrl);
 
     // Realizar la petición al servidor ASP.NET
