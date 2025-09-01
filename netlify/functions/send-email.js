@@ -1,3 +1,5 @@
+/* eslint-env node */
+
 exports.handler = async (event, _context) => {
   console.log('🚀🚀🚀 NETLIFY FUNCTION INICIADA 🚀🚀🚀');
   console.log('⏰ Timestamp:', new Date().toISOString());
