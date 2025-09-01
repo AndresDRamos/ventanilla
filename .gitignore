@@ -27,3 +27,7 @@ dist-ssr
 SendEmail.aspx
 SendEmailFixed.aspx
 SendEmail-ezisol.aspx
+SendEmail-Portal.aspx
+
+# EZI Sol server files (for Portal deployment - not for git)
+ezisol/

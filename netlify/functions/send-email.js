@@ -66,9 +66,9 @@ exports.handler = async (event, _context) => {
     console.log('📦 Asunto:', asunto);
     console.log('📦 Mensaje length:', mensaje.length);
 
-    // URL del servidor ASP.NET usando endpoint de prueba para depuración
-    const aspNetUrl = 'http://ezisol.com.mx/SendEmail-test.aspx';
-    console.log('🔗 URL destino (test endpoint):', aspNetUrl);
+    // URL del endpoint definitivo en Portal (ya confirmado que funciona)
+    const aspNetUrl = 'http://ezisol.com.mx/Portal/sendEmail.aspx';
+    console.log('🔗 URL destino (Portal definitivo):', aspNetUrl);
 
     // Realizar la petición al servidor ASP.NET
     const fetchOptions = {
