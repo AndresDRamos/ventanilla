@@ -23,11 +23,9 @@ dist-ssr
 *.sln
 *.sw?
 
-# ASP.NET files (documentation only, not for deployment)
-SendEmail.aspx
-SendEmailFixed.aspx
-SendEmail-ezisol.aspx
-SendEmail-Portal.aspx
 
 # EZI Sol server files (for Portal deployment - not for git)
 ezisol/
+
+# GitHub configuration (contains copilot instructions - not for public repo)
+.github/
