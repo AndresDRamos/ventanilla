@@ -66,9 +66,9 @@ exports.handler = async (event, _context) => {
     console.log('📦 Asunto:', asunto);
     console.log('📦 Mensaje length:', mensaje.length);
 
-    // URL del servidor ASP.NET usando servidor interno que ya confirmamos que funciona
-    const aspNetUrl = 'http://172.17.201.2/SendEmailFixed.aspx';
-    console.log('🔗 URL destino:', aspNetUrl);
+    // URL del servidor ASP.NET usando endpoint de prueba para depuración
+    const aspNetUrl = 'http://ezisol.com.mx/SendEmail-test.aspx';
+    console.log('🔗 URL destino (test endpoint):', aspNetUrl);
 
     // Realizar la petición al servidor ASP.NET
     const fetchOptions = {

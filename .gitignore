@@ -26,3 +26,4 @@ dist-ssr
 # ASP.NET files (documentation only, not for deployment)
 SendEmail.aspx
 SendEmailFixed.aspx
+SendEmail-ezisol.aspx
