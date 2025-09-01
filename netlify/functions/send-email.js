@@ -1,7 +1,13 @@
 exports.handler = async (event, _context) => {
-  console.log('🚀 Función iniciada');
-  console.log('📝 Método:', event.httpMethod);
-  console.log('📦 Body:', event.body);
+  console.log('🚀🚀🚀 NETLIFY FUNCTION INICIADA 🚀🚀🚀');
+  console.log('⏰ Timestamp:', new Date().toISOString());
+  console.log('📍 Environment:', process.env.NODE_ENV);
+  console.log('🌐 Event httpMethod:', event.httpMethod);
+  console.log('🌐 Event path:', event.path);
+  console.log('🌐 Event headers:', JSON.stringify(event.headers, null, 2));
+  console.log('📦 Event body:', event.body);
+  console.log('📦 Body type:', typeof event.body);
+  console.log('📦 Body length:', event.body ? event.body.length : 0);
   
   // Configurar CORS
   const headers = {
@@ -11,71 +17,149 @@ exports.handler = async (event, _context) => {
     'Content-Type': 'application/json',
   };
 
+  console.log('🔧 Headers CORS configurados:', headers);
+
   // Responder a las requests OPTIONS para CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    console.log('✅ Respondiendo a OPTIONS preflight');
+    console.log('✅ Manejando OPTIONS preflight request');
     return {
       statusCode: 200,
       headers,
-      body: ''
+      body: JSON.stringify({ message: 'CORS preflight OK', timestamp: new Date().toISOString() })
     };
   }
 
   // Solo permitir POST
   if (event.httpMethod !== 'POST') {
     console.log('❌ Método no permitido:', event.httpMethod);
+    console.log('❌ Solo se permite POST');
     return {
       statusCode: 405,
       headers,
-      body: JSON.stringify({ error: 'Method Not Allowed' })
+      body: JSON.stringify({ 
+        error: 'Method Not Allowed', 
+        received: event.httpMethod,
+        allowed: 'POST',
+        timestamp: new Date().toISOString()
+      })
     };
   }
 
   try {
-    console.log('📧 Procesando request POST...');
+    console.log('📧 Iniciando procesamiento POST...');
+    
+    // PASO 1: Test de conectividad con ping
+    console.log('🏓 PASO 1: Testing conectividad con ping...');
+    const pingUrl = 'http://ezisol.com.mx/Portal/ping.aspx';
+    console.log('🏓 URL ping:', pingUrl);
+    
+    try {
+      const pingResponse = await fetch(pingUrl, {
+        method: 'GET',
+        timeout: 10000
+      });
+      
+      console.log('🏓 Ping response status:', pingResponse.status);
+      console.log('🏓 Ping response ok:', pingResponse.ok);
+      
+      if (pingResponse.ok) {
+        const pingText = await pingResponse.text();
+        console.log('🏓 Ping response text:', pingText.substring(0, 500));
+        
+        try {
+          const pingData = JSON.parse(pingText);
+          console.log('🏓 Ping JSON parseado:', pingData);
+          
+          if (pingData.success) {
+            console.log('✅ CONECTIVIDAD CON SERVIDOR: OK');
+            console.log('✅ Base de datos:', pingData.database);
+            console.log('✅ Servidor:', pingData.server);
+          } else {
+            console.log('❌ PING FALLÓ:', pingData.error);
+          }
+        } catch (pingParseError) {
+          console.log('⚠️ Ping response no es JSON válido:', pingParseError.message);
+        }
+      } else {
+        console.log('❌ Ping HTTP error:', pingResponse.status);
+      }
+    } catch (pingError) {
+      console.log('💥 Error en ping test:', pingError.message);
+      console.log('💥 Ping stack:', pingError.stack);
+    }
+    
+    // PASO 2: Validar datos de entrada
+    console.log('📋 PASO 2: Validando datos de entrada...');
     
     if (!event.body) {
       console.log('❌ No hay body en la request');
       return {
         statusCode: 400,
         headers,
-        body: JSON.stringify({ error: 'No body provided' })
+        body: JSON.stringify({ 
+          error: 'No body provided',
+          timestamp: new Date().toISOString(),
+          step: 'body_validation'
+        })
       };
     }
 
-    const requestData = JSON.parse(event.body);
-    console.log('📋 Datos parseados:', JSON.stringify(requestData, null, 2));
+    let requestData;
+    try {
+      requestData = JSON.parse(event.body);
+      console.log('✅ JSON parseado correctamente:', JSON.stringify(requestData, null, 2));
+    } catch (parseError) {
+      console.log('❌ Error parseando JSON:', parseError.message);
+      return {
+        statusCode: 400,
+        headers,
+        body: JSON.stringify({ 
+          error: 'Invalid JSON format',
+          details: parseError.message,
+          timestamp: new Date().toISOString(),
+          step: 'json_parsing'
+        })
+      };
+    }
     
     const { destinatario, asunto, mensaje } = requestData;
+    console.log('📧 Destinatario:', destinatario);
+    console.log('📧 Asunto:', asunto);
+    console.log('📧 Mensaje length:', mensaje ? mensaje.length : 0);
 
     // Validar datos requeridos
     if (!destinatario || !asunto || !mensaje) {
       console.log('❌ Faltan campos requeridos');
+      console.log('❌ Destinatario presente:', !!destinatario);
+      console.log('❌ Asunto presente:', !!asunto);
+      console.log('❌ Mensaje presente:', !!mensaje);
       return {
         statusCode: 400,
         headers,
         body: JSON.stringify({ 
           error: 'Faltan campos requeridos: destinatario, asunto, mensaje',
-          received: { destinatario: !!destinatario, asunto: !!asunto, mensaje: !!mensaje }
+          received: { 
+            destinatario: !!destinatario, 
+            asunto: !!asunto, 
+            mensaje: !!mensaje 
+          },
+          timestamp: new Date().toISOString(),
+          step: 'field_validation'
         })
       };
     }
 
-    console.log('📧 Netlify Proxy: Iniciando envío de email...');
-    console.log('📦 Destinatario:', destinatario);
-    console.log('📦 Asunto:', asunto);
-    console.log('📦 Mensaje length:', mensaje.length);
+    // PASO 3: Llamar al endpoint de email
+    console.log('📤 PASO 3: Llamando al endpoint de email...');
+    const emailUrl = 'http://ezisol.com.mx/Portal/sendEmail.aspx';
+    console.log('� URL email endpoint:', emailUrl);
 
-    // URL del endpoint definitivo en Portal (ya confirmado que funciona)
-    const aspNetUrl = 'http://ezisol.com.mx/Portal/sendEmail.aspx';
-    console.log('🔗 URL destino (Portal definitivo):', aspNetUrl);
-
-    // Realizar la petición al servidor ASP.NET
     const fetchOptions = {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Accept': 'application/json'
+        'Accept': 'application/json',
+        'User-Agent': 'Netlify-Function/1.0'
       },
       body: JSON.stringify({
         destinatario,
@@ -84,43 +168,57 @@ exports.handler = async (event, _context) => {
       })
     };
     
-    console.log('🚀 Iniciando fetch...');
-    const response = await fetch(aspNetUrl, fetchOptions);
-    console.log('🔄 Response status:', response.status);
-    console.log('🔄 Response ok:', response.ok);
+    console.log('� Fetch options:', JSON.stringify(fetchOptions, null, 2));
+    console.log('🚀 Ejecutando fetch al endpoint...');
+    
+    const response = await fetch(emailUrl, fetchOptions);
+    
+    console.log('� Response recibida');
+    console.log('📨 Status:', response.status);
+    console.log('� Status text:', response.statusText);
+    console.log('📨 OK:', response.ok);
+    console.log('📨 Headers:', JSON.stringify([...response.headers.entries()], null, 2));
     
     const responseText = await response.text();
-    console.log('📝 Response text:', responseText);
+    console.log('� Response text length:', responseText.length);
+    console.log('📨 Response text (first 1000 chars):', responseText.substring(0, 1000));
 
-    // El endpoint ASP.NET devuelve JSON
+    // Intentar parsear como JSON
     let responseData;
     try {
       responseData = JSON.parse(responseText);
-      console.log('✅ JSON parseado correctamente:', responseData);
+      console.log('✅ Response JSON parseado:', JSON.stringify(responseData, null, 2));
     } catch (parseError) {
-      console.error('❌ Error parseando JSON response:', parseError.message);
-      console.log('📄 Raw response:', responseText.substring(0, 200));
+      console.error('❌ Error parseando response JSON:', parseError.message);
+      console.log('📄 Raw response preview:', responseText.substring(0, 500));
+      
       responseData = {
         success: false,
         error: 'Response no es JSON válido',
-        rawResponse: responseText.substring(0, 500),
-        parseError: parseError.message
+        rawResponse: responseText.substring(0, 1000),
+        parseError: parseError.message,
+        httpStatus: response.status
       };
     }
 
-    // Verificar si la respuesta indica éxito
+    // PASO 4: Procesar respuesta
+    console.log('✅ PASO 4: Procesando respuesta final...');
+    
     if (response.ok && responseData.success) {
-      console.log('✅ Email enviado exitosamente');
+      console.log('🎉 EMAIL ENVIADO EXITOSAMENTE');
       return {
         statusCode: 200,
         headers,
         body: JSON.stringify({
           success: true,
-          message: responseData.message || 'Email enviado correctamente'
+          message: responseData.message || 'Email enviado correctamente',
+          timestamp: new Date().toISOString(),
+          serverResponse: responseData
         })
       };
     } else {
-      console.log('❌ Error al enviar email:', responseData);
+      console.log('❌ Error al enviar email');
+      console.log('❌ Response data:', responseData);
       return {
         statusCode: response.ok ? 400 : response.status,
         headers,
@@ -128,14 +226,17 @@ exports.handler = async (event, _context) => {
           success: false,
           error: responseData.error || 'Error desconocido al enviar email',
           details: responseData,
-          httpStatus: response.status
+          httpStatus: response.status,
+          timestamp: new Date().toISOString()
         })
       };
     }
 
   } catch (error) {
-    console.error('💥 Error general en proxy:', error);
-    console.error('💥 Stack trace:', error.stack);
+    console.error('💥💥💥 ERROR GENERAL EN PROXY 💥💥💥');
+    console.error('💥 Error message:', error.message);
+    console.error('💥 Error name:', error.name);
+    console.error('💥 Error stack:', error.stack);
     
     return {
       statusCode: 500,
@@ -143,8 +244,12 @@ exports.handler = async (event, _context) => {
       body: JSON.stringify({
         success: false,
         error: 'Error interno del proxy',
-        details: error.message,
-        stack: error.stack
+        details: {
+          message: error.message,
+          name: error.name,
+          stack: error.stack
+        },
+        timestamp: new Date().toISOString()
       })
     };
   }
