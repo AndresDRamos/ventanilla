@@ -29,3 +29,16 @@ ezisol/
 
 # GitHub configuration (contains copilot instructions - not for public repo)
 .github/
+
+# Temporary and backup files
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+.DS_Store
+Thumbs.db
+
+# Development artifacts
+.env.local.backup
+dist-backup/
