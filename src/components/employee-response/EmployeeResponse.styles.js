@@ -185,19 +185,25 @@ export const StarRating = styled.div`
   margin-bottom: 20px;
 
   .star {
-    font-size: 32px;
-    color: #d1d5db;
+    background: none;
+    border: none;
+    font-size: 2rem;
+    color: #dee2e6;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: color 0.2s ease, transform 0.1s ease;
+    padding: 0.25rem;
 
-    &:hover,
     &.filled {
-      color: #fbbf24;
+      color: #ffc107;
+    }
+
+    &:hover:not(.disabled) {
+      color: #ffc107;
       transform: scale(1.1);
     }
 
-    &:hover {
-      filter: drop-shadow(0 0 8px rgba(251, 191, 36, 0.4));
+    &:focus {
+      outline: none;
     }
 
     &.disabled {
@@ -205,8 +211,11 @@ export const StarRating = styled.div`
       
       &:hover {
         transform: none;
-        filter: none;
       }
+    }
+
+    &:disabled {
+      cursor: default;
     }
   }
 `;

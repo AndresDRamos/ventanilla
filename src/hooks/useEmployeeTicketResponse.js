@@ -155,18 +155,42 @@ export const useEmployeeTicketResponse = () => {
       setSubmittingRating(true);
       setError(null);
 
+      console.log('🔄 Enviando calificación...', {
+        ticketId: ticket.idTicket,
+        rating,
+        comment: comment.trim() || null
+      });
+
       // Actualizar la calificación y comentario en la tabla atenciones
       const { error: updateError } = await supabase
         .from('atenciones')
         .update({
           calificacion: rating,
-          comentario: comment.trim() || null,
-          fechaCalificacion: new Date().toISOString()
+          comentario: comment.trim() || null
         })
         .eq('idTicket', ticket.idTicket);
 
       if (updateError) {
         throw new Error('Error al guardar la calificación: ' + updateError.message);
+      }
+
+      console.log('✅ Calificación actualizada en atenciones');
+
+      // Crear seguimiento con idEstado = 4 (cerrado) sin idUsuario
+      const { error: seguimientoError } = await supabase
+        .from('seguimientos')
+        .insert({
+          idTicket: ticket.idTicket,
+          idEstado: 4, // Estado cerrado
+          fecha: new Date().toISOString()
+          // No incluir idUsuario porque es una acción del empleado
+        });
+
+      if (seguimientoError) {
+        console.warn('⚠️ Error al crear seguimiento de cierre:', seguimientoError);
+        // No lanzamos error porque la calificación ya se guardó correctamente
+      } else {
+        console.log('✅ Seguimiento de cierre creado');
       }
 
       // Desactivar el token después de usar

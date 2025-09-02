@@ -274,7 +274,7 @@ export const EmployeeResponseEmailHTML = ({ ticket, empleado, atencion, fechaCre
                 <td style="${emailStyles.infoValue}">#${ticket.idTicket}</td>
               </tr>
               <tr>
-                <td style="${emailStyles.infoLabel}">Fecha de creación:</td>
+                <td style="${emailStyles.infoLabel}">Creado:</td>
                 <td style="${emailStyles.infoValue}">${fechaCreacion}</td>
               </tr>
               <tr>
@@ -287,14 +287,14 @@ export const EmployeeResponseEmailHTML = ({ ticket, empleado, atencion, fechaCre
           </div>
 
           <div style="${emailStyles.descriptionSection}">
-            <p style="${emailStyles.descriptionTitle}">Tu solicitud original:</p>
+            <p style="${emailStyles.descriptionTitle}">Tu solicitud:</p>
             <p style="${emailStyles.descriptionText}">
               "${ticket.descripcion}"
             </p>
           </div>
 
           <div style="background: #f0f9ff; border: 1px solid #0284c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
-            <h3 style="margin: 0 0 15px 0; color: #0c4a6e; font-size: 18px;">📋 Respuesta del equipo:</h3>
+            <h3 style="margin: 0 0 15px 0; color: #0c4a6e; font-size: 18px;"> Respuesta:</h3>
             <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #0284c7;">
               <p style="margin: 0; color: #374151; line-height: 1.6;">
                 ${atencion.respuesta}

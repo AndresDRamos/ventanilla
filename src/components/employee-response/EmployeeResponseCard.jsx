@@ -65,13 +65,15 @@ export const EmployeeResponseCard = ({ responseData }) => {
     const stars = [];
     for (let i = 1; i <= 3; i++) {
       stars.push(
-        <span
+        <button
           key={i}
+          type="button"
           className={`star ${i <= selectedRating ? 'filled' : ''} ${isSubmitted ? 'disabled' : ''}`}
           onClick={isSubmitted ? undefined : () => setSelectedRating(i)}
+          disabled={isSubmitted}
         >
-          ⭐
-        </span>
+          {i <= selectedRating ? '★' : '☆'}
+        </button>
       );
     }
     return stars;
