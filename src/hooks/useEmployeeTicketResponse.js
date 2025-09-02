@@ -49,6 +49,9 @@ export const useEmployeeTicketResponse = () => {
         const tokenData = await validateTicketToken(token);
         
         console.log('📄 Datos del token:', tokenData);
+        console.log('🔑 idTicket del token:', tokenData.idTicket);
+        console.log('🎫 tickets del token:', tokenData.tickets);
+        console.log('👤 empleados del token:', tokenData.empleados);
         
         // Verificar que este token sea para un empleado (no para admin)
         if (!tokenData.idEmpleado || tokenData.idUsuario) {
@@ -72,7 +75,11 @@ export const useEmployeeTicketResponse = () => {
         setTicket(tokenData.tickets);
         setEmpleado(tokenData.empleados);
 
-        // Obtener datos de atención usando idTicket del token
+        // Usar el idTicket correcto (del ticket relacionado, no del token directamente)
+        const ticketId = tokenData.tickets.idTicket;
+        console.log('🎫 Usando ticketId para consultas:', ticketId);
+
+        // Obtener datos de atención usando idTicket del ticket relacionado
         const { data: atencionData, error: atencionError } = await supabase
           .from('atenciones')
           .select(`
@@ -82,7 +89,7 @@ export const useEmployeeTicketResponse = () => {
             fechaAtencion,
             usuarios (nombre)
           `)
-          .eq('idTicket', tokenData.idTicket)  // Usar idTicket directamente del token
+          .eq('idTicket', ticketId)  // Usar idTicket del ticket relacionado
           .single();
         
         if (atencionError || !atencionData) {
@@ -97,7 +104,7 @@ export const useEmployeeTicketResponse = () => {
         const { data: seguimientoData, error: seguimientoError } = await supabase
           .from('seguimientos')
           .select('fecha')
-          .eq('idTicket', tokenData.idTicket)  // Usar idTicket directamente del token
+          .eq('idTicket', ticketId)  // Usar idTicket del ticket relacionado
           .eq('idEstado', 3)
           .order('fecha', { ascending: false })
           .limit(1)
