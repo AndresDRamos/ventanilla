@@ -152,10 +152,10 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
       tipo: 'delegado'
     });
 
-    // 5. Llamar al endpoint ASP.NET interno para enviar email
+    // 5. Llamar al endpoint correspondiente según el entorno
     const emailEndpoint = import.meta.env.DEV 
       ? '/api/email'  // Usa el proxy de Vite en desarrollo
-      : import.meta.env.VITE_EMAIL_ENDPOINT || '/api/send-email';
+      : import.meta.env.VITE_EMAIL_ENDPOINT || 'https://ventanilla-ezi.netlify.app/.netlify/functions/send-email';
 
     const emailResponse = await fetch(emailEndpoint, {
       method: 'POST',
@@ -241,10 +241,10 @@ export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
       tipo: 'nuevo'
     });
 
-    // 5. Llamar al endpoint ASP.NET interno para enviar email
+    // 5. Llamar al endpoint correspondiente según el entorno
     const emailEndpoint = import.meta.env.DEV 
       ? '/api/email'  // Usa el proxy de Vite en desarrollo
-      : import.meta.env.VITE_EMAIL_ENDPOINT || '/api/send-email';
+      : import.meta.env.VITE_EMAIL_ENDPOINT || 'https://ventanilla-ezi.netlify.app/.netlify/functions/send-email';
 
     const emailResponse = await fetch(emailEndpoint, {
       method: 'POST',
@@ -351,10 +351,10 @@ export const enviarNotificacionRespuesta = async (ticket, empleado, _respuesta) 
       tipo: 'respondido'
     });
 
-    // 5. Llamar al endpoint ASP.NET interno para enviar email
+    // 5. Llamar al endpoint correspondiente según el entorno
     const emailEndpoint = import.meta.env.DEV 
       ? '/api/email'  // Usa el proxy de Vite en desarrollo
-      : '/.netlify/functions/send-email'; // Función de Netlify en producción
+      : import.meta.env.VITE_EMAIL_ENDPOINT || 'https://ventanilla-ezi.netlify.app/.netlify/functions/send-email'; // Netlify function en producción
 
     const emailResponse = await fetch(emailEndpoint, {
       method: 'POST',
