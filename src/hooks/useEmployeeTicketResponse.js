@@ -82,22 +82,13 @@ export const useEmployeeTicketResponse = () => {
         // Obtener datos de atención usando idTicket del ticket relacionado
         console.log('🔍 Consultando atenciones para ticketId:', ticketId);
         
-        // Primero verificar si existe el registro de atención
-        const { data: atencionBasica, error: errorBasico } = await supabase
-          .from('atenciones')
-          .select('*')
-          .eq('idTicket', ticketId);
-        
-        console.log('📊 Atenciones encontradas:', atencionBasica, 'Error:', errorBasico);
-        
         const { data: atencionData, error: atencionError } = await supabase
           .from('atenciones')
           .select(`
             respuesta,
             calificacion,
             comentario,
-            fechaAtencion,
-            idUsuario
+            usuarios (nombre)
           `)
           .eq('idTicket', ticketId)
           .single();
@@ -109,24 +100,8 @@ export const useEmployeeTicketResponse = () => {
 
         console.log('✅ Datos de atención obtenidos:', atencionData);
 
-        // Obtener nombre del usuario que respondió
-        let adminNombre = 'Administrador';
-        if (atencionData.idUsuario) {
-          const { data: usuarioData, error: usuarioError } = await supabase
-            .from('usuarios')
-            .select('nombre')
-            .eq('idUsuario', atencionData.idUsuario)
-            .single();
-          
-          if (!usuarioError && usuarioData) {
-            adminNombre = usuarioData.nombre;
-          }
-          
-          console.log('👤 Admin que respondió:', adminNombre);
-        }
-
         setAtencion(atencionData);
-        setAdminNombre(adminNombre);
+        setAdminNombre(atencionData.usuarios?.nombre || 'Administrador');
 
         // Obtener fecha de cuando se respondió
         const { data: seguimientoData, error: seguimientoError } = await supabase
