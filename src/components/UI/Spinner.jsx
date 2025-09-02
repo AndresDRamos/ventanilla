@@ -25,7 +25,7 @@ const SpinnerElement = styled.div`
 `;
 
 const SpinnerText = styled.div`
-  color: ${props => props.textColor || '#6c757d'};
+  color: ${props => props.$textColor || '#6c757d'};
   font-size: 0.9rem;
   text-align: center;
   font-weight: 500;
@@ -41,7 +41,7 @@ const Spinner = ({
   return (
     <SpinnerContainer height={height}>
       <SpinnerElement size={size} />
-      {showText && <SpinnerText textColor={textColor}>{text}</SpinnerText>}
+      {showText && <SpinnerText $textColor={textColor}>{text}</SpinnerText>}
     </SpinnerContainer>
   );
 };

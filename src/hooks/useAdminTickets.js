@@ -139,25 +139,14 @@ export const useAdminTickets = (user, asignaciones = []) => {
             return;
           }
           
-          // Aplicar filtro en la query principal
+          // Aplicar filtro por empleados de las plantas asignadas
           query = query.in("idEmpleado", empleadosPermitidosIds);
-        } else if (user?.idRol === 3) {
-          // Para usuarios con idRol = 3, obtener tickets delegados desde el inicio
-          const { data: delegaciones } = await supabase
-            .from("delegaciones")
-            .select("idTicket")
-            .eq("idUsuario", user.idUsuario)
-            .eq("bActivo", true);
-            
-          if (!delegaciones || delegaciones.length === 0) {
-            setTickets([]);
-            setLoading(false);
-            return;
-          }
           
-          const ticketsDelegadosIds = delegaciones.map(d => d.idTicket);
-          query = query.in("idTicket", ticketsDelegadosIds);
+          // CRÍTICO: También filtrar por tipos de solicitud asignados al usuario
+          const tiposAsignados = [...new Set(asignacionesUsuario.map(a => a.idTipoSolicitud))];
+          query = query.in("idTipoSolicitud", tiposAsignados);
         }
+        // Eliminada lógica de idRol = 3 (delegaciones) por problemas en BD
 
         // Aplicar filtros adicionales
         if (filters.planta) {
