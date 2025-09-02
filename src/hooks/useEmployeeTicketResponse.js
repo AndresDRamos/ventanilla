@@ -46,8 +46,16 @@ export const useEmployeeTicketResponse = () => {
         // Validar token y obtener datos del ticket
         const tokenData = await validateTicketToken(token);
         
-        if (!tokenData.empleados || !tokenData.tickets) {
+        // Verificar que este token sea para un empleado (no para admin)
+        if (!tokenData.idEmpleado || tokenData.idUsuario) {
           setError('Este enlace es para administradores. Los empleados deben usar el enlace de respuesta.');
+          setLoading(false);
+          return;
+        }
+
+        // Verificar que tengamos los datos necesarios
+        if (!tokenData.tickets || !tokenData.empleados) {
+          setError('No se pudieron cargar los datos del ticket.');
           setLoading(false);
           return;
         }
@@ -56,21 +64,11 @@ export const useEmployeeTicketResponse = () => {
         setTicket(tokenData.tickets);
         setEmpleado(tokenData.empleados);
 
-        // Obtener datos completos de la atención/respuesta
-        const { data: atencionData, error: atencionError } = await supabase
-          .from('atenciones')
-          .select(`
-            respuesta,
-            fechaAtencion,
-            calificacion,
-            comentario,
-            usuarios (nombre)
-          `)
-          .eq('idTicket', tokenData.tickets.idTicket)
-          .single();
-
-        if (atencionError) {
-          throw new Error('No se pudo cargar la respuesta del ticket');
+        // Obtener datos de atención desde el token (ya incluidos en la consulta)
+        const atencionData = tokenData.tickets.atenciones?.[0];
+        
+        if (!atencionData) {
+          throw new Error('No se encontró respuesta para este ticket');
         }
 
         setAtencion(atencionData);

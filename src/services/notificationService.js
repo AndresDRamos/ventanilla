@@ -67,7 +67,8 @@ export const validateTicketToken = async (token) => {
           empleados (nombre, plantas (planta)),
           tiposSolicitud (tipoSolicitud),
           prioridades (prioridad),
-          estados (estado)
+          estados (estado),
+          atenciones (respuesta, calificacion, comentario, fechaAtencion, usuarios (nombre))
         ),
         usuarios (nombre, correo),
         empleados!idEmpleado (idEmpleado, nombre, correo)
