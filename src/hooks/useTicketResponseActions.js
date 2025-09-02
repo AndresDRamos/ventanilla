@@ -58,16 +58,7 @@ export const useTicketResponseActions = (ticket, token, navigate) => {
         throw new Error(`Error desactivando token: ${tokenError.message}`);
       }
 
-      // 5. Desactivar delegación si existe
-      const { error: delegacionError } = await supabase
-        .from('delegaciones')
-        .update({ bActivo: false })
-        .eq('idTicket', ticket.tickets.idTicket)
-        .eq('idUsuario', ticket.idUsuario); // Usar idUsuario del token
-
-      if (delegacionError) {
-        // Delegación no encontrada o ya desactivada
-      }
+      // 5. Las delegaciones ya no existen - código simplificado
 
       setSuccess(true);
       

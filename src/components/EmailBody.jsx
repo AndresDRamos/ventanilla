@@ -113,6 +113,11 @@ const notificationTypes = {
     action: "reasignado",
     actionText: "Se te ha reasignado un ticket para atención:",
   },
+  respondido: {
+    title: "Tu Ticket Ha Sido Respondido",
+    action: "respondido",
+    actionText: "Tu solicitud ha sido atendida. Puedes ver la respuesta y calificar nuestro servicio:",
+  },
 };
 
 /**

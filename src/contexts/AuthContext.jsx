@@ -67,6 +67,7 @@ export const AuthProvider = ({ children }) => {
       idEmpleado: data.idEmpleado,
       codigoEmpleado: data.codigoEmpleado,
       empleado: data.empleado,
+      correo: data.correo || null,
       idPlanta: data.idPlanta,
       planta: data.planta,
       idEsquemaPago: data.idEsquemaPago || null,

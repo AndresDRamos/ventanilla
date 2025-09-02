@@ -60,6 +60,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
             idEmpleado: employeeData.idEmpleado,
             codigoEmpleado: employeeData.codigoEmpleado,
             nombre: employeeData.empleado,
+            correo: employeeData.correo,
             idPlanta: employeeData.idPlanta,
             plantas: { planta: employeeData.planta },
           });
@@ -71,6 +72,7 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
           idEmpleado: employeeData.idEmpleado,
           codigoEmpleado: employeeData.codigoEmpleado,
           nombre: employeeData.empleado,
+          correo: employeeData.correo,
           idPlanta: employeeData.idPlanta,
           plantas: { planta: employeeData.planta },
         });
@@ -172,6 +174,11 @@ const EmployeeTicketsPage = ({ employeeData, onLogout }) => {
                   (empleadoCompleto?.idEsquemaPago ||
                     employeeData?.idEsquemaPago)
               )?.esquemaPago || "No configurado"}
+              {(empleadoCompleto?.correo || employeeData?.correo) && (
+                <>
+                  {" | Correo: "}{empleadoCompleto?.correo || employeeData?.correo}
+                </>
+              )}
             </EmployeeInfo>
           </HeaderLeft>
 

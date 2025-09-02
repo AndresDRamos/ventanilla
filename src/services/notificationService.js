@@ -1,27 +1,20 @@
-// Servicio de notificaciones por email
-// Sistema con Resend + Edge Functions (profesional)
-
 import { supabase } from '../supabase/supabase.config.jsx';
 import { TicketEmailHTML } from '../components/EmailBody.jsx';
 
 /**
- * Genera         notificationType: 'nuevo' // Para distinguir tipos de notificación
-      }
-    });
-
-    if (error) {
-      console.error('Error invocando Edge Function:', error);
-      throw error;
-    }
-
-    return {
-      success: data.success,o para acceso directo al ticket
+ * Genera un token único para acceso directo a un ticket
  * @param {number} idTicket - ID del ticket
- * @param {number} idUsuario - ID del usuario destinatario
+ * @param {number} idUsuario - ID del usuario admin destinatario (opcional)
+ * @param {number} idEmpleado - ID del empleado destinatario (opcional)
  * @returns {Promise<string>} Token generado
  */
-export const generateTicketToken = async (idTicket, idUsuario) => {
+export const generateTicketToken = async (idTicket, idUsuario = null, idEmpleado = null) => {
   try {
+    // Verificar que se proporcione al menos un ID
+    if (!idUsuario && !idEmpleado) {
+      throw new Error('Debe proporcionar idUsuario o idEmpleado');
+    }
+
     // Generar token único
     const token = crypto.randomUUID();
     
@@ -29,16 +22,25 @@ export const generateTicketToken = async (idTicket, idUsuario) => {
     const fechaExpiracion = new Date();
     fechaExpiracion.setDate(fechaExpiracion.getDate() + 7);
 
+    // Construir objeto para insertar
+    const tokenData = {
+      token,
+      idTicket: idTicket,
+      fecha_expiracion: fechaExpiracion.toISOString(),
+      bActivo: true
+    };
+
+    // Agregar el campo correspondiente según el tipo de destinatario
+    if (idEmpleado) {
+      tokenData.idEmpleado = idEmpleado;
+    } else if (idUsuario) {
+      tokenData.idUsuario = idUsuario;
+    }
+
     // Guardar token en la base de datos
     const { error } = await supabase
       .from('ticket_tokens')
-      .insert({
-        token,
-        idTicket: idTicket,
-        idUsuario: idUsuario,
-        fecha_expiracion: fechaExpiracion.toISOString(),
-        bActivo: true
-      });
+      .insert(tokenData);
 
     if (error) throw error;
 
@@ -67,7 +69,8 @@ export const validateTicketToken = async (token) => {
           prioridades (prioridad),
           estados (estado)
         ),
-        usuarios (nombre, correo)
+        usuarios (nombre, correo),
+        empleados!idEmpleado (idEmpleado, nombre, correo)
       `)
       .eq('token', token)
       .eq('bActivo', true)
@@ -112,7 +115,7 @@ export const deactivateToken = async (token) => {
 export const enviarNotificacionDelegacion = async (ticket, usuario) => {
   try {
     // 1. Generar token de acceso directo
-    const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario);
+    const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario, null);
     
     // 2. Construir enlace directo
     const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
@@ -201,7 +204,7 @@ export const enviarNotificacionDelegacion = async (ticket, usuario) => {
 export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
   try {
     // 1. Generar token de acceso directo
-    const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario);
+    const token = await generateTicketToken(ticket.idTicket, usuario.idUsuario, null);
     
     // 2. Construir enlace directo
     const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
@@ -281,10 +284,121 @@ export const enviarNotificacionTicketNuevo = async (ticket, usuario) => {
   }
 };
 
+/**
+ * Envía notificación por email cuando se responde un ticket (para empleados)
+ * @param {Object} ticket - Información completa del ticket
+ * @param {Object} empleado - Datos del empleado que creó el ticket
+ * @param {Object} respuesta - Datos de la respuesta/atención
+ * @returns {Promise<Object>} Resultado del envío
+ */
+export const enviarNotificacionRespuesta = async (ticket, empleado, _respuesta) => {
+  try {
+    // Verificar que el empleado tenga correo
+    if (!empleado.correo) {
+      console.warn('Empleado sin correo electrónico, no se envía notificación');
+      return {
+        success: false,
+        error: 'Empleado sin correo electrónico registrado'
+      };
+    }
+
+    // 🚨 DESARROLLO: Desactivar email temporalmente si el servidor no está disponible
+    if (import.meta.env.DEV && import.meta.env.VITE_DISABLE_EMAIL_IN_DEV === 'true') {
+      console.log('📧 [DEV] Notificación de respuesta simulada para:', empleado.correo);
+      console.log('📧 [DEV] Ticket:', ticket.idTicket);
+      return {
+        success: true,
+        message: 'Email de respuesta simulado en desarrollo',
+        token: 'dev-response-token-' + Date.now()
+      };
+    }
+
+    // 1. Generar token de acceso directo para que el empleado vea la respuesta
+    const token = await generateTicketToken(ticket.idTicket, null, empleado.idEmpleado);
+    
+    // 2. Construir enlace directo para ver la respuesta
+    const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
+                   (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
+    const directLink = `${baseUrl}/ventanilla/respuesta/${token}`;
+
+    // 3. Obtener fecha de creación del ticket desde seguimientos
+    const { data: fechaCreacionData, error: fechaError } = await supabase
+      .from('seguimientos')
+      .select('fecha')
+      .eq('idTicket', ticket.idTicket)
+      .eq('idEstado', 1)
+      .order('fecha', { ascending: true })
+      .limit(1)
+      .single();
+
+    let fechaCreacion = 'Fecha no disponible';
+    if (fechaCreacionData && !fechaError) {
+      fechaCreacion = new Date(fechaCreacionData.fecha).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // 4. Construir mensaje HTML para el email usando el componente
+    const emailHTML = TicketEmailHTML({
+      ticket: ticket,
+      usuario: { nombre: empleado.nombre }, // Para empleados, usar su nombre
+      directLink: directLink,
+      fechaCreacion: fechaCreacion,
+      tipo: 'respondido'
+    });
+
+    // 5. Llamar al endpoint ASP.NET interno para enviar email
+    const emailEndpoint = import.meta.env.DEV 
+      ? '/api/email'  // Usa el proxy de Vite en desarrollo
+      : '/.netlify/functions/send-email'; // Función de Netlify en producción
+
+    const emailResponse = await fetch(emailEndpoint, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        destinatario: empleado.correo,
+        asunto: `Tu Ticket Ha Sido Respondido - #${ticket.idTicket}`,
+        mensaje: emailHTML
+      })
+    });
+
+    const emailResult = await emailResponse.json();
+
+    if (!emailResult.success) {
+      throw new Error(emailResult.error || 'Error enviando email');
+    }
+
+    return {
+      success: true,
+      token: token,
+      directLink: directLink,
+      emailResult: {
+        success: true,
+        messageId: 'response-email-' + Date.now(),
+        to: empleado.correo
+      }
+    };
+
+  } catch (error) {
+    console.error('Error enviando notificación de respuesta:', error);
+    return {
+      success: false,
+      error: error.message
+    };
+  }
+};
+
 export default {
   generateTicketToken,
   validateTicketToken,
   deactivateToken,
   enviarNotificacionDelegacion,
-  enviarNotificacionTicketNuevo
+  enviarNotificacionTicketNuevo,
+  enviarNotificacionRespuesta
 };

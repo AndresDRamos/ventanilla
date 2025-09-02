@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '../supabase/supabase.config.jsx';
-import { TicketEmailHTML } from '../components/EmailBody.jsx';
+import { enviarNotificacionTicketNuevo } from '../services/notificationService.js';
 
 // Hook para obtener plantas
 export const usePlantas = () => {
@@ -182,24 +182,7 @@ export const useTickets = () => {
 
       if (seguimientoError) throw seguimientoError;
 
-      // Crear token de acceso para el usuario asignado
-      const token = crypto.randomUUID();
-      const fechaExpiracion = new Date();
-      fechaExpiracion.setDate(fechaExpiracion.getDate() + 7);
-
-      const { error: tokenError } = await supabase
-        .from('ticket_tokens')
-        .insert({
-          token,
-          idTicket: ticketCreado.idTicket,
-          idUsuario: asignacionData.idUsuario,
-          fecha_expiracion: fechaExpiracion.toISOString(),
-          bActivo: true
-        });
-
-      if (tokenError) throw tokenError;
-
-      // Enviar notificación al usuario asignado usando endpoint interno
+      // Enviar notificación al usuario asignado usando el servicio
       try {
         // Obtener datos completos del ticket recién creado
         const { data: ticketCompleto, error: ticketCompletoError } = await supabase
@@ -224,68 +207,13 @@ export const useTickets = () => {
           .single();
 
         if (!ticketCompletoError && !usuarioError && ticketCompleto && usuarioAsignado) {
-          // Enviar notificación usando endpoint ASP.NET interno
-          const baseUrl = import.meta.env.VITE_APP_BASE_URL || 
-                         (import.meta.env.PROD ? 'https://andresdramos.github.io' : 'http://localhost:5173');
-          const directLink = `${baseUrl}/ventanilla/ticket/${token}`;
-
-          // Obtener fecha de creación del ticket desde seguimientos
-          const { data: fechaCreacionData, error: fechaError } = await supabase
-            .from('seguimientos')
-            .select('fecha')
-            .eq('idTicket', ticketCompleto.idTicket)
-            .eq('idEstado', 1)
-            .order('fecha', { ascending: true })
-            .limit(1)
-            .single();
-
-          let fechaCreacion = 'Fecha no disponible';
-          if (fechaCreacionData && !fechaError) {
-            fechaCreacion = new Date(fechaCreacionData.fecha).toLocaleDateString('es-MX', {
-              year: 'numeric',
-              month: 'long',
-              day: 'numeric',
-              hour: '2-digit',
-              minute: '2-digit'
-            });
-          }
-
-          // Generar HTML del email usando el componente
-          const emailHTML = TicketEmailHTML({
-            ticket: ticketCompleto,
-            usuario: usuarioAsignado,
-            directLink: directLink,
-            fechaCreacion: fechaCreacion,
-            tipo: 'nuevo'
-          });
-
-          // Llamar al endpoint ASP.NET interno para enviar email
+          // Usar el servicio de notificaciones
+          const notificationResult = await enviarNotificacionTicketNuevo(ticketCompleto, usuarioAsignado);
           
-          const emailPayload = {
-            destinatario: usuarioAsignado.correo,
-            asunto: `Nuevo Ticket Asignado - #${ticketCompleto.idTicket}`,
-            mensaje: emailHTML
-          };
-          
-          // Usar proxy en desarrollo, variable de entorno en producción
-          const emailEndpoint = import.meta.env.DEV 
-            ? '/api/email'  // Usa el proxy de Vite en desarrollo
-            : import.meta.env.VITE_EMAIL_ENDPOINT || 'https://cors-anywhere.herokuapp.com/http://172.17.201.2/SendEmail.aspx';
-          
-          const emailResponse = await fetch(emailEndpoint, {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(emailPayload)
-          });
-
-          const emailResult = await emailResponse.json();
-          console.log('📨 Email result:', emailResult);
-
-          if (!emailResult.success) {
-            console.error('❌ Email no enviado:', emailResult.error);
-            // No fallar la creación del ticket por problemas de notificación
+          if (notificationResult.success) {
+            console.log('📨 Notificación enviada exitosamente');
+          } else {
+            console.error('❌ Error enviando notificación:', notificationResult.error);
           }
         } else {
           console.error('❌ Error obteniendo datos para notificación:', {

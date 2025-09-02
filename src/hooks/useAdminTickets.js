@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { supabase } from "../supabase/supabase.config.jsx";
-import { enviarNotificacionDelegacion } from "../services/notificationService.js";
+import { enviarNotificacionRespuesta } from "../services/notificationService.js";
 
 // Hook para obtener todos los tickets con filtros
 export const useAdminTickets = (user, asignaciones = []) => {
@@ -406,16 +406,42 @@ export const useAtenciones = (user) => {
 
       if (ticketError) throw ticketError;
 
-      // 4. Desactivar cualquier delegación activa del ticket (para autoasignaciones)
-      const { error: delegacionError } = await supabase
-        .from("delegaciones")
-        .update({ bActivo: false })
-        .eq("idTicket", idTicket)
-        .eq("bActivo", true);
+      // 4. NUEVO: Enviar notificación por email al empleado (si tiene correo)
+      try {
+        // Obtener datos completos del ticket incluyendo empleado
+        const { data: ticketCompleto, error: ticketError } = await supabase
+          .from("tickets")
+          .select(`
+            *,
+            empleados (
+              idEmpleado,
+              nombre,
+              correo,
+              plantas (planta)
+            ),
+            tiposSolicitud (tipoSolicitud),
+            prioridades (prioridad)
+          `)
+          .eq("idTicket", idTicket)
+          .single();
 
-      // No lanzamos error si no hay delegaciones, solo si hay un problema real
-      if (delegacionError && !delegacionError.message?.includes("0 rows")) {
-        // Error al desactivar delegaciones
+        if (!ticketError && ticketCompleto?.empleados?.correo) {
+          // Enviar notificación solo si el empleado tiene correo
+          const notificationResult = await enviarNotificacionRespuesta(
+            ticketCompleto,
+            ticketCompleto.empleados,
+            atencionData
+          );
+
+          if (notificationResult.success) {
+            console.log('Notificación de respuesta enviada exitosamente');
+          } else {
+            console.warn('Error enviando notificación de respuesta:', notificationResult.error);
+          }
+        }
+      } catch (notificationError) {
+        // No fallar toda la operación por problemas de notificación
+        console.warn('Error en el sistema de notificaciones:', notificationError);
       }
 
       return { success: true, atencion: atencionData };
@@ -426,128 +452,6 @@ export const useAtenciones = (user) => {
       setLoading(false);
     }
   }, []);
-
-  const delegarTicket = useCallback(
-    async (idTicket, idUsuarioActual, idUsuarioDestino) => {
-      try {
-        setLoading(true);
-
-        // 0. Invalidar todos los tokens anteriores para este ticket (en caso de re-delegación)
-        try {
-          const { error: invalidateTokenError } = await supabase
-            .from("ticket_tokens")
-            .update({ bActivo: false, fecha_uso: new Date().toISOString() })
-            .eq("idTicket", idTicket)
-            .eq("bActivo", true);
-
-          if (invalidateTokenError) {
-            // Advertencia al invalidar tokens en delegación
-          }
-        } catch (tokenError) {
-          // Error manejando tokens (no crítico)
-          // Continuar con la delegación aunque falle el manejo de tokens
-        }
-
-        // 2. Obtener datos completos del ticket antes de delegar
-        const { data: ticketCompleto, error: fetchError } = await supabase
-          .from("tickets")
-          .select(
-            `
-          *,
-          empleados (
-            nombre,
-            plantas (planta)
-          ),
-          tiposSolicitud (tipoSolicitud),
-          prioridades (prioridad)
-        `
-          )
-          .eq("idTicket", idTicket)
-          .single();
-
-        if (fetchError) throw fetchError;
-
-        // 3. Obtener datos del usuario destinatario
-        const { data: usuarioDestino, error: usuarioError } = await supabase
-          .from("usuarios")
-          .select("idUsuario, nombre, correo")
-          .eq("idUsuario", idUsuarioDestino)
-          .single();
-
-        if (usuarioError) throw usuarioError;
-
-        // 4. Crear seguimiento con idUsuario que delega e idEstado = 2 (delegado)
-        const { error: seguimientoError } = await supabase
-          .from("seguimientos")
-          .insert({
-            idTicket,
-            idUsuario: idUsuarioActual,
-            idEstado: 2,
-          });
-
-        if (seguimientoError) throw seguimientoError;
-
-        // 4. Actualizar el idEstado del ticket a 2
-        const { error: ticketError } = await supabase
-          .from("tickets")
-          .update({ idEstado: 2 })
-          .eq("idTicket", idTicket);
-
-        if (ticketError) throw ticketError;
-
-        // 5. Desactivar delegaciones anteriores para este ticket
-        const { error: desactivarError } = await supabase
-          .from("delegaciones")
-          .update({ bActivo: false })
-          .eq("idTicket", idTicket)
-          .eq("bActivo", true);
-
-        if (desactivarError) throw desactivarError;
-
-        // 6. Crear nueva delegación activa
-        const { error: delegacionError } = await supabase
-          .from("delegaciones")
-          .insert({
-            idTicket,
-            idUsuario: idUsuarioDestino,
-            // bActivo es TRUE por defecto
-          });
-
-        if (delegacionError) throw delegacionError;
-
-        // 7. Enviar notificación por email (si está configurado)
-        try {
-          // Enviar notificación completa (token + email)
-          const notificationResult = await enviarNotificacionDelegacion(
-            ticketCompleto,
-            usuarioDestino
-          );
-
-          if (notificationResult.success) {
-            // Notificación enviada exitosamente
-          } else {
-            // Error enviando notificación (delegación completada)
-          }
-        } catch (notificationError) {
-          // Error en sistema de notificaciones (delegación completada)
-          // No fallar la delegación por problemas de notificación
-        }
-
-        return {
-          success: true,
-          mensaje: "Ticket delegado exitosamente.",
-          ticketData: ticketCompleto,
-          usuarioDestino,
-        };
-      } catch (err) {
-        console.error("Error al delegar el ticket:", err);
-        return { success: false, error: err.message };
-      } finally {
-        setLoading(false);
-      }
-    },
-    []
-  );
 
   const cancelarTicket = useCallback(
     async (idTicket, idUsuario, motivoCancelacion) => {
@@ -596,30 +500,14 @@ export const useAtenciones = (user) => {
     []
   );
 
-  // Función para re-asignar un ticket a otro usuario
+  // Función para re-asignar un ticket a otro usuario (simplificada sin delegaciones)
   const reasignarTicket = useCallback(
-    async (idTicket, nuevoIdUsuario) => {
+    async (idTicket, _nuevoIdUsuario) => {
       if (!user) return { success: false, error: "Usuario no disponible" };
 
       setLoading(true);
       try {
-        // 0. Invalidar todos los tokens anteriores para este ticket (en caso de re-asignación)
-        try {
-          const { error: invalidateTokenError } = await supabase
-            .from("ticket_tokens")
-            .update({ bActivo: false, fecha_uso: new Date().toISOString() })
-            .eq("idTicket", idTicket)
-            .eq("bActivo", true);
-
-          if (invalidateTokenError) {
-            // Advertencia al invalidar tokens en reasignación
-          }
-        } catch (tokenError) {
-          // Error manejando tokens en reasignación (no crítico)
-          // Continuar con la reasignación aunque falle el manejo de tokens
-        }
-
-        // 1. Crear nuevo seguimiento con idEstado = 2 (delegado)
+        // 1. Crear nuevo seguimiento con idEstado = 2 (reasignado)
         const { error: seguimientoError } = await supabase
           .from("seguimientos")
           .insert({
@@ -629,78 +517,6 @@ export const useAtenciones = (user) => {
           });
 
         if (seguimientoError) throw seguimientoError;
-
-        // 2. Desactivar delegación anterior
-        const { error: desactivarError } = await supabase
-          .from("delegaciones")
-          .update({ bActivo: false })
-          .eq("idTicket", idTicket)
-          .eq("bActivo", true);
-
-        if (desactivarError) throw desactivarError;
-
-        // 3. Crear nueva delegación activa
-        const { error: delegacionError } = await supabase
-          .from("delegaciones")
-          .insert({
-            idTicket,
-            idUsuario: nuevoIdUsuario,
-            // bActivo es TRUE por defecto, no necesita especificarse
-          });
-
-        if (delegacionError) throw delegacionError;
-
-        // 4. Enviar notificación al nuevo usuario (solo si tiene idRol = 3)
-        try {
-          // Obtener datos del nuevo usuario y del ticket completo
-          const { data: nuevoUsuario, error: userError } = await supabase
-            .from("usuarios")
-            .select("idUsuario, idRol, correo, nombre")
-            .eq("idUsuario", nuevoIdUsuario)
-            .single();
-
-          if (!userError && nuevoUsuario && nuevoUsuario.idRol === 3) {
-            // Obtener datos completos del ticket
-            const { data: ticketCompleto, error: ticketError } = await supabase
-              .from("tickets")
-              .select(
-                `
-              *,
-              empleados (nombre, plantas (planta)),
-              tiposSolicitud (tipoSolicitud),
-              prioridades (prioridad),
-              estados (estado)
-            `
-              )
-              .eq("idTicket", idTicket)
-              .single();
-
-            if (!ticketError && ticketCompleto) {
-              const notificationResult = await enviarNotificacionDelegacion(
-                ticketCompleto,
-                nuevoUsuario
-              );
-
-              if (!notificationResult.success) {
-                console.error(
-                  "Error al enviar notificación de reasignación:",
-                  notificationResult.error
-                );
-                // No fallar toda la operación por error en notificación
-              } else {
-                // Notificación de reasignación enviada exitosamente
-              }
-            }
-          }
-        } catch (notificationError) {
-          console.error(
-            "Error en proceso de notificación de reasignación:",
-            notificationError
-          );
-          // No fallar toda la operación por error en notificación
-        }
-
-        // El ticket mantiene idEstado = 2 (delegado)
 
         return { success: true };
       } catch (err) {
@@ -713,34 +529,15 @@ export const useAtenciones = (user) => {
     [user]
   );
 
-  // Función para autoasignarse un ticket previamente delegado
-  const autoasignarTicket = useCallback(async (idTicket) => {
-    setLoading(true);
-    try {
-      // 1. Desactivar la delegación actual
-      const { error: desactivarError } = await supabase
-        .from("delegaciones")
-        .update({ bActivo: false })
-        .eq("idTicket", idTicket)
-        .eq("bActivo", true);
-
-      if (desactivarError) throw desactivarError;
-
-      // 2. El usuario ahora puede responder el ticket normalmente
-      // No se cambia el idEstado del ticket hasta que envíe la respuesta
-
-      return { success: true };
-    } catch (err) {
-      console.error("Error al autoasignarse el ticket:", err);
-      return { success: false, error: err.message };
-    } finally {
-      setLoading(false);
-    }
+  // Función para autoasignarse un ticket (ya no necesaria sin delegaciones)
+  const autoasignarTicket = useCallback(async (_idTicket) => {
+    // Sin tabla de delegaciones, esta función ya no es necesaria
+    // Los tickets se pueden responder directamente
+    return { success: true };
   }, []);
 
   return {
     crearAtencion,
-    delegarTicket,
     cancelarTicket,
     reasignarTicket,
     autoasignarTicket,

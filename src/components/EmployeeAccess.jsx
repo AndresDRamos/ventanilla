@@ -4,21 +4,25 @@ import styled from "styled-components";
 import { useAppAuth } from "../contexts/AuthContext.jsx";
 import { usePlantas, useEsquemasPago } from "../hooks/useTickets.js";
 import { useEmpleados } from "../hooks/useEmpleados.js";
+import EmailRequiredModal from "./EmailRequiredModal.jsx";
 
 const EmployeeAccess = () => {
   const [employeeCode, setEmployeeCode] = useState("");
   const [fullName, setFullName] = useState("");
+  const [email, setEmail] = useState("");
   const [selectedPlanta, setSelectedPlanta] = useState("");
   const [selectedEsquemaPago, setSelectedEsquemaPago] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [step, setStep] = useState(1); // 1: Código empleado, 2: Datos completos
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [foundEmployee, setFoundEmployee] = useState(null);
   
   const { employeeLogin } = useAppAuth();
   const navigate = useNavigate();
   const { plantas, loading: loadingPlantas } = usePlantas();
   const { esquemas, loading: loadingEsquemas } = useEsquemasPago();
-  const { buscarEmpleadoPorCodigo, crearEmpleado, loading: loadingEmpleados } = useEmpleados();
+  const { buscarEmpleadoPorCodigo, crearEmpleado, actualizarCorreo, loading: loadingEmpleados } = useEmpleados();
 
   const handleCodeSubmit = async (e) => {
     e.preventDefault();
@@ -46,11 +50,21 @@ const EmployeeAccess = () => {
       }
 
       if (result.empleado) {
-        // Empleado encontrado, hacer login directo
+        // Empleado encontrado, verificar si tiene correo
+        if (!result.empleado.correo) {
+          // Sin correo - mostrar modal para solicitarlo
+          setFoundEmployee(result.empleado);
+          setShowEmailModal(true);
+          setLoading(false);
+          return;
+        }
+
+        // Empleado encontrado con correo, hacer login directo
         const loginData = {
           idEmpleado: result.empleado.idEmpleado,
           codigoEmpleado: result.empleado.codigoEmpleado,
           empleado: result.empleado.nombre,
+          correo: result.empleado.correo,
           idPlanta: result.empleado.idPlanta,
           planta: result.empleado.plantas?.planta,
           idEsquemaPago: result.empleado.idEsquemaPago || null
@@ -71,12 +85,69 @@ const EmployeeAccess = () => {
     }
   };
 
+  // Función para guardar el correo del empleado encontrado
+  const handleEmailSaved = async (email) => {
+    try {
+      const result = await actualizarCorreo(foundEmployee.idEmpleado, email);
+      
+      if (!result.success) {
+        return { success: false, error: result.error };
+      }
+
+      // Actualizar datos del empleado con el nuevo correo
+      const updatedEmployee = { ...foundEmployee, correo: email };
+      
+      // Hacer login con los datos actualizados
+      const loginData = {
+        idEmpleado: updatedEmployee.idEmpleado,
+        codigoEmpleado: updatedEmployee.codigoEmpleado,
+        empleado: updatedEmployee.nombre,
+        correo: updatedEmployee.correo,
+        idPlanta: updatedEmployee.idPlanta,
+        planta: updatedEmployee.plantas?.planta,
+        idEsquemaPago: updatedEmployee.idEsquemaPago || null
+      };
+      
+      employeeLogin(loginData);
+      
+      // Cerrar modal y redirigir
+      setShowEmailModal(false);
+      setFoundEmployee(null);
+      navigate('/employee');
+      
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: error.message };
+    }
+  };
+
+  // Función para cancelar el modal (continuar sin correo por ahora)
+  const handleEmailModalCancel = () => {
+    // Hacer login sin correo
+    const loginData = {
+      idEmpleado: foundEmployee.idEmpleado,
+      codigoEmpleado: foundEmployee.codigoEmpleado,
+      empleado: foundEmployee.nombre,
+      correo: null,
+      idPlanta: foundEmployee.idPlanta,
+      planta: foundEmployee.plantas?.planta,
+      idEsquemaPago: foundEmployee.idEsquemaPago || null
+    };
+    
+    employeeLogin(loginData);
+    
+    // Cerrar modal y redirigir
+    setShowEmailModal(false);
+    setFoundEmployee(null);
+    navigate('/employee');
+  };
+
   const handleRegistrationSubmit = async (e) => {
     e.preventDefault();
     setError("");
 
     if (!fullName.trim() || !selectedPlanta || !selectedEsquemaPago) {
-      setError("Por favor, complete todos los campos");
+      setError("Por favor, complete todos los campos obligatorios");
       return;
     }
 
@@ -87,7 +158,8 @@ const EmployeeAccess = () => {
         employeeCode.trim(), 
         fullName.trim(), 
         selectedPlanta, 
-        selectedEsquemaPago
+        selectedEsquemaPago,
+        email.trim() || null // Incluir correo si se proporcionó
       );
       
       if (!result.success) {
@@ -101,6 +173,7 @@ const EmployeeAccess = () => {
         idEmpleado: result.empleado.idEmpleado,
         codigoEmpleado: result.empleado.codigoEmpleado,
         empleado: result.empleado.nombre,
+        correo: result.empleado.correo,
         idPlanta: result.empleado.idPlanta,
         planta: result.empleado.plantas?.planta,
         idEsquemaPago: result.empleado.idEsquemaPago || null
@@ -119,6 +192,7 @@ const EmployeeAccess = () => {
   const handleBackToCode = () => {
     setStep(1);
     setFullName("");
+    setEmail("");
     setSelectedPlanta("");
     setSelectedEsquemaPago("");
     setError("");
@@ -126,36 +200,46 @@ const EmployeeAccess = () => {
 
   if (step === 1) {
     return (
-      <Form onSubmit={handleCodeSubmit}>
-        <Title>Acceso Empleado</Title>
-        <Description>
-          Ingresa tu código de empleado para acceder al sistema
-        </Description>
+      <>
+        <Form onSubmit={handleCodeSubmit}>
+          <Title>Acceso Empleado</Title>
+          <Description>
+            Ingresa tu código de empleado para acceder al sistema
+          </Description>
 
-        {error && <ErrorMessage>{error}</ErrorMessage>}
+          {error && <ErrorMessage>{error}</ErrorMessage>}
 
-        <FormGroup>
-          <Label>Número de Empleado</Label>
-          <NumericInput
-            type="text"
-            inputMode="numeric"
-            pattern="[0-9]*"
-            placeholder="Ej: 12345"
-            value={employeeCode}
-            onChange={(e) => {
-              const value = e.target.value.replace(/\D/g, ""); // Solo números
-              setEmployeeCode(value);
-            }}
-            disabled={loading || loadingEmpleados}
-            required
-            autoComplete="employee-id"
-          />
-        </FormGroup>
+          <FormGroup>
+            <Label>Número de Empleado</Label>
+            <NumericInput
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
+              placeholder="Ej: 12345"
+              value={employeeCode}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, ""); // Solo números
+                setEmployeeCode(value);
+              }}
+              disabled={loading || loadingEmpleados}
+              required
+              autoComplete="employee-id"
+            />
+          </FormGroup>
 
-        <SubmitButton type="submit" disabled={loading || loadingEmpleados}>
-          {loading || loadingEmpleados ? "Verificando..." : "Acceder"}
-        </SubmitButton>
-      </Form>
+          <SubmitButton type="submit" disabled={loading || loadingEmpleados}>
+            {loading || loadingEmpleados ? "Verificando..." : "Acceder"}
+          </SubmitButton>
+        </Form>
+
+        {/* Modal de correo requerido */}
+        <EmailRequiredModal
+          isOpen={showEmailModal}
+          employeeData={foundEmployee}
+          onEmailSaved={handleEmailSaved}
+          onCancel={handleEmailModalCancel}
+        />
+      </>
     );
   }
 
@@ -186,6 +270,18 @@ const EmployeeAccess = () => {
       </FormGroup>
 
       <FormGroup>
+        <Label>Correo Electrónico</Label>
+        <TextInput
+          type="email"
+          placeholder="tu.correo@ejemplo.com"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          disabled={loading || loadingEmpleados || loadingEsquemas}
+          autoComplete="email"
+        />
+      </FormGroup>
+
+      <FormGroup>
         <Label>Planta</Label>
         {loadingPlantas ? (
           <LoadingSelect disabled>Cargando plantas...</LoadingSelect>
@@ -196,7 +292,7 @@ const EmployeeAccess = () => {
             disabled={loading || loadingEmpleados || loadingEsquemas}
             required
           >
-            <option value="">Seleccione su planta...</option>
+            <option value="">Seleccione su planta</option>
             {plantas.map((planta) => (
               <option key={planta.idPlanta} value={planta.idPlanta}>
                 {planta.planta}
@@ -217,7 +313,7 @@ const EmployeeAccess = () => {
             disabled={loading || loadingEmpleados || loadingEsquemas}
             required
           >
-            <option value="">Seleccione su esquema de pago...</option>
+            <option value="">Seleccione su esquema</option>
             {esquemas.map((esquema) => (
               <option key={esquema.idEsquemaPago} value={esquema.idEsquemaPago}>
                 {esquema.esquemaPago}
@@ -318,6 +414,7 @@ const Select = styled.select`
   font-family: inherit;
   background-color: var(--color-white);
   transition: border-color 0.2s ease;
+  min-width: 100%;
 
   &:focus {
     outline: none;
@@ -415,5 +512,4 @@ const BackButton = styled.button`
     cursor: not-allowed;
   }
 `;
-
 export default EmployeeAccess;

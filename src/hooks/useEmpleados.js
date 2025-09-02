@@ -17,6 +17,7 @@ export const useEmpleados = () => {
           idEmpleado,
           codigoEmpleado,
           nombre,
+          correo,
           idPlanta,
           idEsquemaPago,
           plantas (
@@ -46,7 +47,7 @@ export const useEmpleados = () => {
   }, []);
 
   // Crear nuevo empleado
-  const crearEmpleado = useCallback(async (codigoEmpleado, nombre, idPlanta, idEsquemaPago) => {
+  const crearEmpleado = useCallback(async (codigoEmpleado, nombre, idPlanta, idEsquemaPago, correo = null) => {
     setLoading(true);
     setError(null);
 
@@ -59,12 +60,14 @@ export const useEmpleados = () => {
             nombre,
             idPlanta,
             idEsquemaPago,
+            correo,
           },
         ])
         .select(`
           idEmpleado,
           codigoEmpleado,
           nombre,
+          correo,
           idPlanta,
           idEsquemaPago,
           plantas (
@@ -98,6 +101,7 @@ export const useEmpleados = () => {
           idEmpleado,
           codigoEmpleado,
           nombre,
+          correo,
           idPlanta,
           idEsquemaPago,
           plantas (
@@ -155,6 +159,42 @@ export const useEmpleados = () => {
     }
   }, []);
 
+  // Actualizar correo del empleado
+  const actualizarCorreo = useCallback(async (idEmpleado, correo) => {
+    setLoading(true);
+    setError(null);
+
+    try {
+      const { data, error } = await supabase
+        .from("empleados")
+        .update({ correo })
+        .eq("idEmpleado", idEmpleado)
+        .select(`
+          idEmpleado,
+          codigoEmpleado,
+          nombre,
+          correo,
+          idPlanta,
+          idEsquemaPago,
+          plantas (
+            idPlanta,
+            planta
+          )
+        `)
+        .single();
+
+      if (error) throw error;
+
+      return { success: true, empleado: data };
+    } catch (err) {
+      console.error("Error al actualizar correo:", err);
+      setError(err.message);
+      return { success: false, error: err.message };
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
   return {
     loading,
     error,
@@ -162,5 +202,6 @@ export const useEmpleados = () => {
     crearEmpleado,
     obtenerEmpleadoPorId,
     actualizarEsquemaPago,
+    actualizarCorreo,
   };
 };
