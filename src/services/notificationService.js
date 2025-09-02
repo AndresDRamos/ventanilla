@@ -58,6 +58,8 @@ export const generateTicketToken = async (idTicket, idUsuario = null, idEmpleado
  */
 export const validateTicketToken = async (token) => {
   try {
+    console.log('🔍 Validando token:', token);
+    
     const { data, error } = await supabase
       .from('ticket_tokens')
       .select(`
@@ -67,8 +69,7 @@ export const validateTicketToken = async (token) => {
           empleados (nombre, plantas (planta)),
           tiposSolicitud (tipoSolicitud),
           prioridades (prioridad),
-          estados (estado),
-          atenciones (respuesta, calificacion, comentario, fechaAtencion, usuarios (nombre))
+          estados (estado)
         ),
         usuarios (nombre, correo),
         empleados!idEmpleado (idEmpleado, nombre, correo)
@@ -78,10 +79,14 @@ export const validateTicketToken = async (token) => {
       .gt('fecha_expiracion', new Date().toISOString())
       .single();
 
+    console.log('📊 Resultado de consulta de token:', { data, error });
+
     if (error || !data) {
+      console.error('❌ Token inválido o expirado:', error);
       throw new Error('Token inválido o expirado');
     }
 
+    console.log('✅ Token válido:', data);
     return data;
   } catch (error) {
     console.error('Error validando token:', error);

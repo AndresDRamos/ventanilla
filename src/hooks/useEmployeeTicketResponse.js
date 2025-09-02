@@ -43,11 +43,16 @@ export const useEmployeeTicketResponse = () => {
       try {
         setLoading(true);
         
+        console.log('🔍 Validando token para empleado:', token);
+        
         // Validar token y obtener datos del ticket
         const tokenData = await validateTicketToken(token);
         
+        console.log('📄 Datos del token:', tokenData);
+        
         // Verificar que este token sea para un empleado (no para admin)
         if (!tokenData.idEmpleado || tokenData.idUsuario) {
+          console.warn('❌ Token no es para empleado:', { idEmpleado: tokenData.idEmpleado, idUsuario: tokenData.idUsuario });
           setError('Este enlace es para administradores. Los empleados deben usar el enlace de respuesta.');
           setLoading(false);
           return;
@@ -55,19 +60,32 @@ export const useEmployeeTicketResponse = () => {
 
         // Verificar que tengamos los datos necesarios
         if (!tokenData.tickets || !tokenData.empleados) {
+          console.warn('❌ Faltan datos del ticket o empleado:', { hasTickets: !!tokenData.tickets, hasEmpleados: !!tokenData.empleados });
           setError('No se pudieron cargar los datos del ticket.');
           setLoading(false);
           return;
         }
 
+        console.log('✅ Validación exitosa, cargando datos...');
+
         // Establecer datos básicos
         setTicket(tokenData.tickets);
         setEmpleado(tokenData.empleados);
 
-        // Obtener datos de atención desde el token (ya incluidos en la consulta)
-        const atencionData = tokenData.tickets.atenciones?.[0];
+        // Obtener datos de atención por separado
+        const { data: atencionData, error: atencionError } = await supabase
+          .from('atenciones')
+          .select(`
+            respuesta,
+            calificacion,
+            comentario,
+            fechaAtencion,
+            usuarios (nombre)
+          `)
+          .eq('idTicket', tokenData.tickets.idTicket)
+          .single();
         
-        if (!atencionData) {
+        if (atencionError || !atencionData) {
           throw new Error('No se encontró respuesta para este ticket');
         }
 
