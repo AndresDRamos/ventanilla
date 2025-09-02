@@ -72,7 +72,7 @@ export const useEmployeeTicketResponse = () => {
         setTicket(tokenData.tickets);
         setEmpleado(tokenData.empleados);
 
-        // Obtener datos de atención por separado
+        // Obtener datos de atención usando idTicket del token
         const { data: atencionData, error: atencionError } = await supabase
           .from('atenciones')
           .select(`
@@ -82,10 +82,11 @@ export const useEmployeeTicketResponse = () => {
             fechaAtencion,
             usuarios (nombre)
           `)
-          .eq('idTicket', tokenData.tickets.idTicket)
+          .eq('idTicket', tokenData.idTicket)  // Usar idTicket directamente del token
           .single();
         
         if (atencionError || !atencionData) {
+          console.error('❌ Error obteniendo atenciones:', atencionError);
           throw new Error('No se encontró respuesta para este ticket');
         }
 
@@ -96,7 +97,7 @@ export const useEmployeeTicketResponse = () => {
         const { data: seguimientoData, error: seguimientoError } = await supabase
           .from('seguimientos')
           .select('fecha')
-          .eq('idTicket', tokenData.tickets.idTicket)
+          .eq('idTicket', tokenData.idTicket)  // Usar idTicket directamente del token
           .eq('idEstado', 3)
           .order('fecha', { ascending: false })
           .limit(1)

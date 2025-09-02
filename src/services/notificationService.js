@@ -5,7 +5,19 @@ import { TicketEmailHTML, EmployeeResponseEmailHTML } from '../components/EmailB
  * Genera un token único para acceso directo a un ticket
  * @param {number} idTicket - ID del ticket
  * @param {number} idUsuario - ID del usuario admin destinatario (opcional)
- * @param {number} idEmpleado - ID del empleado destinatario (opcional)
+ * @param {    // 4. Obtener datos completos de la respuesta y quien respondió
+    const { data: atencionData, error: atencionError } = await supabase
+      .from('atenciones')
+      .select(`
+        respuesta,
+        usuarios (nombre)
+      `)
+      .eq('idTicket', ticket.idTicket)
+      .single();
+
+    if (atencionError || !atencionData) {
+      throw new Error('No se pudo obtener la información de la respuesta');
+    }leado - ID del empleado destinatario (opcional)
  * @returns {Promise<string>} Token generado
  */
 export const generateTicketToken = async (idTicket, idUsuario = null, idEmpleado = null) => {
