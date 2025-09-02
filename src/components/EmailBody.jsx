@@ -237,8 +237,110 @@ export const TicketEmailHTML = ({
   `;
 };
 
+/**
+ * Template específico para emails de respuesta a empleados
+ * Muestra solo la información relevante para el empleado y la respuesta del admin
+ */
+export const EmployeeResponseEmailHTML = ({ ticket, empleado, atencion, fechaCreacion, fechaRespuesta, adminNombre, directLink }) => {
+  const config = notificationTypes.respondido;
+
+  return `
+    <!DOCTYPE html>
+    <html>
+    <head>
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${config.title}</title>
+    </head>
+    <body style="${emailStyles.container}">
+      
+      <div style="${emailStyles.header}">
+        <h1 style="${emailStyles.title}">${config.title}</h1>
+        <p style="${emailStyles.subtitle}">Sistema de Atención EZI</p>
+      </div>
+
+      <div style="${emailStyles.content}">
+        
+        <div style="${emailStyles.card}">
+          <h2 style="${emailStyles.greeting}">Hola ${empleado.nombre},</h2>
+          <p style="font-size: 16px; margin-bottom: 20px;">
+            ${config.actionText}
+          </p>
+
+          <div style="${emailStyles.infoSection}">
+            <table style="${emailStyles.infoTable}">
+              <tr>
+                <td style="${emailStyles.infoLabel}">Ticket:</td>
+                <td style="${emailStyles.infoValue}">#${ticket.idTicket}</td>
+              </tr>
+              <tr>
+                <td style="${emailStyles.infoLabel}">Fecha de creación:</td>
+                <td style="${emailStyles.infoValue}">${fechaCreacion}</td>
+              </tr>
+              <tr>
+                <td style="${emailStyles.infoLabel}">Prioridad:</td>
+                <td style="${emailStyles.infoValue}">${
+    ticket.prioridades?.prioridad || "Normal"
+  }</td>
+              </tr>
+            </table>
+          </div>
+
+          <div style="${emailStyles.descriptionSection}">
+            <p style="${emailStyles.descriptionTitle}">Tu solicitud original:</p>
+            <p style="${emailStyles.descriptionText}">
+              "${ticket.descripcion}"
+            </p>
+          </div>
+
+          <div style="background: #f0f9ff; border: 1px solid #0284c7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+            <h3 style="margin: 0 0 15px 0; color: #0c4a6e; font-size: 18px;">📋 Respuesta del equipo:</h3>
+            <div style="background: white; padding: 15px; border-radius: 6px; border-left: 4px solid #0284c7;">
+              <p style="margin: 0; color: #374151; line-height: 1.6;">
+                ${atencion.respuesta}
+              </p>
+            </div>
+            <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #bae6fd;">
+              <p style="margin: 0; font-size: 14px; color: #0369a1;">
+                <strong>Atendido por:</strong> ${adminNombre} <br>
+                <strong>Fecha de respuesta:</strong> ${fechaRespuesta}
+              </p>
+            </div>
+          </div>
+
+          <div style="${emailStyles.buttonSection}">
+            <a href="${directLink}" 
+               style="${emailStyles.button}"
+               target="_blank">
+              Ver Respuesta y Calificar Servicio
+            </a>
+          </div>
+
+          <div style="${emailStyles.noteSection}">
+            <p style="${emailStyles.noteText}">
+              <strong>Califica nuestro servicio:</strong> Usa el enlace anterior para ver tu respuesta completa y calificar la atención recibida. 
+              Tu opinión nos ayuda a mejorar. Enlace válido por 7 días.
+            </p>
+          </div>
+
+        </div>
+
+        <div style="${emailStyles.footer}">
+          <p style="margin: 0;">
+            Sistema de Tickets - EZI<br>
+            Este email fue generado automáticamente por el sistema de gestión de tickets.
+          </p>
+        </div>
+
+      </div>
+    </body>
+    </html>
+  `;
+};
+
 export default {
   TicketEmailHTML,
+  EmployeeResponseEmailHTML,
   emailStyles,
   notificationTypes,
 };

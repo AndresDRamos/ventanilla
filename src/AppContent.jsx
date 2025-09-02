@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage.jsx";
 import AdminDashboard from "./pages/admin/AdminDashboard.jsx";
 import EmployeeTicketsPage from "./pages/employee/EmployeeTicketsPage.jsx";
 import TicketResponse from "./pages/admin/TicketResponse.jsx";
+import EmployeeTicketResponse from "./pages/employee/EmployeeTicketResponse.jsx";
 
 const AppContent = () => {
   const { user, employeeData, initializing } = useAppAuth();
@@ -25,8 +26,9 @@ const AppContent = () => {
 
   return (
     <Routes>
-      {/* Ruta pública para responder tickets */}
+      {/* Rutas públicas para responder tickets */}
       <Route path="/ticket/:token" element={<TicketResponse />} />
+      <Route path="/respuesta/:token" element={<EmployeeTicketResponse />} />
       
       {/* Ruta de login - siempre accesible */}
       <Route path="/login" element={<LoginPage />} />

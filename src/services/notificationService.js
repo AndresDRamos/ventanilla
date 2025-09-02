@@ -1,5 +1,5 @@
 import { supabase } from '../supabase/supabase.config.jsx';
-import { TicketEmailHTML } from '../components/EmailBody.jsx';
+import { TicketEmailHTML, EmployeeResponseEmailHTML } from '../components/EmailBody.jsx';
 
 /**
  * Genera un token único para acceso directo a un ticket
@@ -342,13 +342,50 @@ export const enviarNotificacionRespuesta = async (ticket, empleado, _respuesta) 
       });
     }
 
-    // 4. Construir mensaje HTML para el email usando el componente
-    const emailHTML = TicketEmailHTML({
+    // 4. Obtener datos completos de la respuesta y quien respondió
+    const { data: atencionData, error: atencionError } = await supabase
+      .from('atenciones')
+      .select(`
+        respuesta,
+        usuarios (nombre)
+      `)
+      .eq('idTicket', ticket.idTicket)
+      .single();
+
+    if (atencionError || !atencionData) {
+      throw new Error('No se pudo obtener la información de la respuesta');
+    }
+
+    // 5. Obtener fecha de cuando se respondió (seguimiento con estado 3)
+    const { data: seguimientoData, error: seguimientoError } = await supabase
+      .from('seguimientos')
+      .select('fecha')
+      .eq('idTicket', ticket.idTicket)
+      .eq('idEstado', 3)
+      .order('fecha', { ascending: false })
+      .limit(1)
+      .single();
+
+    let fechaRespuesta = 'Fecha no disponible';
+    if (seguimientoData && !seguimientoError) {
+      fechaRespuesta = new Date(seguimientoData.fecha).toLocaleDateString('es-MX', {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    }
+
+    // 6. Construir mensaje HTML usando la plantilla específica para empleados
+    const emailHTML = EmployeeResponseEmailHTML({
       ticket: ticket,
-      usuario: { nombre: empleado.nombre }, // Para empleados, usar su nombre
-      directLink: directLink,
+      empleado: empleado,
+      atencion: atencionData,
       fechaCreacion: fechaCreacion,
-      tipo: 'respondido'
+      fechaRespuesta: fechaRespuesta,
+      adminNombre: atencionData.usuarios?.nombre || 'Administrador',
+      directLink: directLink
     });
 
     // 5. Llamar al endpoint correspondiente según el entorno
