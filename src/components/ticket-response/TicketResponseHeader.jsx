@@ -20,12 +20,10 @@ const TicketResponseHeader = ({ ticket }) => {
             window.open('/ventanilla/admin', '_blank');
           }, 200);
         } else {
-          console.warn('⚠️ Auto-login falló, abriendo sin autenticación');
           // Fallback: abrir el panel admin sin auto-login
           window.open('/ventanilla/admin', '_blank');
         }
       } catch (error) {
-        console.error('❌ Error en auto-login:', error);
         // Fallback: abrir el panel admin sin auto-login
         window.open('/ventanilla/admin', '_blank');
       }

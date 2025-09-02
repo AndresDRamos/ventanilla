@@ -1,16 +1,6 @@
 /* eslint-env node */
 
 exports.handler = async (event, _context) => {
-  console.log('🚀🚀🚀 NETLIFY FUNCTION INICIADA 🚀🚀🚀');
-  console.log('⏰ Timestamp:', new Date().toISOString());
-  console.log('📍 Environment:', process.env.NODE_ENV);
-  console.log('🌐 Event httpMethod:', event.httpMethod);
-  console.log('🌐 Event path:', event.path);
-  console.log('🌐 Event headers:', JSON.stringify(event.headers, null, 2));
-  console.log('📦 Event body:', event.body);
-  console.log('📦 Body type:', typeof event.body);
-  console.log('📦 Body length:', event.body ? event.body.length : 0);
-  
   // Configurar CORS
   const headers = {
     'Access-Control-Allow-Origin': '*',
@@ -19,11 +9,8 @@ exports.handler = async (event, _context) => {
     'Content-Type': 'application/json',
   };
 
-  console.log('🔧 Headers CORS configurados:', headers);
-
   // Responder a las requests OPTIONS para CORS preflight
   if (event.httpMethod === 'OPTIONS') {
-    console.log('✅ Manejando OPTIONS preflight request');
     return {
       statusCode: 200,
       headers,
@@ -33,8 +20,6 @@ exports.handler = async (event, _context) => {
 
   // Solo permitir POST
   if (event.httpMethod !== 'POST') {
-    console.log('❌ Método no permitido:', event.httpMethod);
-    console.log('❌ Solo se permite POST');
     return {
       statusCode: 405,
       headers,
@@ -48,12 +33,8 @@ exports.handler = async (event, _context) => {
   }
 
   try {
-    console.log('📧 Iniciando procesamiento POST...');
-    
-    // PASO 1: Test de conectividad con ping
-    console.log('🏓 PASO 1: Testing conectividad con ping...');
+    // Test de conectividad con ping
     const pingUrl = 'http://ezisol.com.mx/Portal/ping.aspx';
-    console.log('🏓 URL ping:', pingUrl);
     
     try {
       const pingResponse = await fetch(pingUrl, {

@@ -43,19 +43,11 @@ export const useEmployeeTicketResponse = () => {
       try {
         setLoading(true);
         
-        console.log('🔍 Validando token para empleado:', token);
-        
         // Validar token y obtener datos del ticket
         const tokenData = await validateTicketToken(token);
         
-        console.log('📄 Datos del token:', tokenData);
-        console.log('🔑 idTicket del token:', tokenData.idTicket);
-        console.log('🎫 tickets del token:', tokenData.tickets);
-        console.log('👤 empleados del token:', tokenData.empleados);
-        
         // Verificar que este token sea para un empleado (no para admin)
         if (!tokenData.idEmpleado || tokenData.idUsuario) {
-          console.warn('❌ Token no es para empleado:', { idEmpleado: tokenData.idEmpleado, idUsuario: tokenData.idUsuario });
           setError('Este enlace es para administradores. Los empleados deben usar el enlace de respuesta.');
           setLoading(false);
           return;
@@ -63,13 +55,10 @@ export const useEmployeeTicketResponse = () => {
 
         // Verificar que tengamos los datos necesarios
         if (!tokenData.tickets || !tokenData.empleados) {
-          console.warn('❌ Faltan datos del ticket o empleado:', { hasTickets: !!tokenData.tickets, hasEmpleados: !!tokenData.empleados });
           setError('No se pudieron cargar los datos del ticket.');
           setLoading(false);
           return;
         }
-
-        console.log('✅ Validación exitosa, cargando datos...');
 
         // Establecer datos básicos
         setTicket(tokenData.tickets);
@@ -77,11 +66,8 @@ export const useEmployeeTicketResponse = () => {
 
         // Usar el idTicket correcto (del ticket relacionado, no del token directamente)
         const ticketId = tokenData.tickets.idTicket;
-        console.log('🎫 Usando ticketId para consultas:', ticketId);
 
         // Obtener datos de atención usando idTicket del ticket relacionado
-        console.log('🔍 Consultando atenciones para ticketId:', ticketId);
-        
         const { data: atencionData, error: atencionError } = await supabase
           .from('atenciones')
           .select(`
@@ -94,11 +80,8 @@ export const useEmployeeTicketResponse = () => {
           .single();
         
         if (atencionError || !atencionData) {
-          console.error('❌ Error obteniendo atenciones:', atencionError);
           throw new Error('No se encontró respuesta para este ticket');
         }
-
-        console.log('✅ Datos de atención obtenidos:', atencionData);
 
         setAtencion(atencionData);
         setAdminNombre(atencionData.usuarios?.nombre || 'Administrador');
@@ -155,12 +138,6 @@ export const useEmployeeTicketResponse = () => {
       setSubmittingRating(true);
       setError(null);
 
-      console.log('🔄 Enviando calificación...', {
-        ticketId: ticket.idTicket,
-        rating,
-        comment: comment.trim() || null
-      });
-
       // Actualizar la calificación y comentario en la tabla atenciones
       const { error: updateError } = await supabase
         .from('atenciones')
@@ -174,8 +151,6 @@ export const useEmployeeTicketResponse = () => {
         throw new Error('Error al guardar la calificación: ' + updateError.message);
       }
 
-      console.log('✅ Calificación actualizada en atenciones');
-
       // Crear seguimiento con idEstado = 4 (cerrado) sin idUsuario
       const { error: seguimientoError } = await supabase
         .from('seguimientos')
@@ -187,10 +162,8 @@ export const useEmployeeTicketResponse = () => {
         });
 
       if (seguimientoError) {
-        console.warn('⚠️ Error al crear seguimiento de cierre:', seguimientoError);
         // No lanzamos error porque la calificación ya se guardó correctamente
-      } else {
-        console.log('✅ Seguimiento de cierre creado');
+        console.warn('Error al crear seguimiento de cierre:', seguimientoError);
       }
 
       // Desactivar el token después de usar
@@ -202,8 +175,6 @@ export const useEmployeeTicketResponse = () => {
       setSuccess(true);
       setIsSubmitted(true);
       setResponseMessage(`¡Gracias por calificar nuestro servicio con ${rating} ${rating === 1 ? 'estrella' : 'estrellas'}!`);
-
-      console.log('✅ Calificación guardada exitosamente');
 
     } catch (error) {
       console.error('Error enviando calificación:', error);
